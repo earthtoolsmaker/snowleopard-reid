@@ -1,7 +1,9 @@
 schema: '2.0'
 stages:
   reorganize_locations:
-    cmd: uv run python scripts/data/reorganize_locations.py
+    cmd: uv run python scripts/data/reorganize_locations.py --input-dir 
+      data/01_raw/locations --output-dir data/02_processed/locations 
+      --config-dir data/02_processed/config
     deps:
     - path: data/01_raw/locations
       hash: md5
