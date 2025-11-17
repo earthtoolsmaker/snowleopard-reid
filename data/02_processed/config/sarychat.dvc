@@ -1,0 +1,6 @@
+outs:
+- md5: dfc651e83234201e89ddc7d5a4923ea2.dir
+  size: 1437
+  nfiles: 2
+  hash: md5
+  path: sarychat

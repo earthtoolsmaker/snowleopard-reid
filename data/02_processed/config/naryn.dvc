@@ -1,0 +1,6 @@
+outs:
+- md5: d78d6d4c3725e57734602284ec6a85af.dir
+  size: 591
+  nfiles: 2
+  hash: md5
+  path: naryn

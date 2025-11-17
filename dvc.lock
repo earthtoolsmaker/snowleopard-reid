@@ -1,0 +1,36 @@
+schema: '2.0'
+stages:
+  reorganize_locations:
+    cmd: uv run python scripts/data/reorganize_locations.py
+    deps:
+    - path: data/01_raw/locations
+      hash: md5
+      md5: edba822bc576a007bfae675441ad4b56.dir
+      size: 2887614689
+      nfiles: 1315
+    - path: data/02_processed/config/naryn/individuals.yaml
+      hash: md5
+      md5: 14868258fbcbc109256dc105357f9cd6
+      size: 261
+    - path: data/02_processed/config/naryn/mappings.yaml
+      hash: md5
+      md5: e49a170cf13814fcd616a03021aefb85
+      size: 330
+    - path: data/02_processed/config/sarychat/individuals.yaml
+      hash: md5
+      md5: 125eff4a1ad2befd7c48a64b0d9299fe
+      size: 553
+    - path: data/02_processed/config/sarychat/mappings.yaml
+      hash: md5
+      md5: 8a2adbbb8b46a78e096fad652963ac98
+      size: 884
+    - path: scripts/data/reorganize_locations.py
+      hash: md5
+      md5: 5ea198f09c96c54dc9c391f1b9ba7dcc
+      size: 14960
+    outs:
+    - path: data/02_processed/locations
+      hash: md5
+      md5: 082552e9df22ae9e4786d9b65be68ea0.dir
+      size: 1936317980
+      nfiles: 909
