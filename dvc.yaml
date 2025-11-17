@@ -15,3 +15,19 @@ stages:
     outs:
       - data/02_processed/locations
     desc: "Reorganize snow leopard images from raw data into processed structure using canonical individual configs"
+
+  grounding_dino_detection:
+    cmd: >-
+      uv run python scripts/models/grounding_dino.py
+      --input-dir data/02_processed/locations
+      --output-dir data/05_model_output/grounding_dino
+      --text-prompt "a snow leopard."
+      --model-id IDEA-Research/grounding-dino-base
+      --box-threshold 0.30
+      --text-threshold 0.20
+    deps:
+      - scripts/models/grounding_dino.py
+      - data/02_processed/locations
+    outs:
+      - data/05_model_output/grounding_dino
+    desc: "Detect snow leopards in images using GroundingDINO zero-shot object detection"
