@@ -89,3 +89,23 @@ stages:
       md5: 0733a9d015aaa6f5e717969df6e874c4.dir
       size: 320102750
       nfiles: 2753
+  crop_masks:
+    cmd: uv run python scripts/data/crop_leopard_masks.py --sam-output-dir 
+      data/05_model_output/sam_hq --output-dir 
+      data/02_processed/cropped/leopards --padding 10
+    deps:
+    - path: data/05_model_output/sam_hq
+      hash: md5
+      md5: 0733a9d015aaa6f5e717969df6e874c4.dir
+      size: 320102750
+      nfiles: 2753
+    - path: scripts/data/crop_leopard_masks.py
+      hash: md5
+      md5: ff7ab3b01b1003062b09750dda67817e
+      size: 7054
+    outs:
+    - path: data/02_processed/cropped/leopards
+      hash: md5
+      md5: d4444cdb7522271639b33213f4e1537a.dir
+      size: 235758260
+      nfiles: 934

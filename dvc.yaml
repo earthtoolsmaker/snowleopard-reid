@@ -48,3 +48,16 @@ stages:
     outs:
       - data/05_model_output/sam_hq
     desc: "Generate high-quality segmentation masks using SAM HQ vit_l (Large) with GroundingDINO bounding boxes as prompts"
+
+  crop_masks:
+    cmd: >-
+      uv run python scripts/data/crop_leopard_masks.py
+      --sam-output-dir data/05_model_output/sam_hq
+      --output-dir data/02_processed/cropped/leopards
+      --padding 10
+    deps:
+      - scripts/data/crop_leopard_masks.py
+      - data/05_model_output/sam_hq
+    outs:
+      - data/02_processed/cropped/leopards
+    desc: "Crop individual snow leopards from images using SAM HQ masks with black background for downstream processing"
