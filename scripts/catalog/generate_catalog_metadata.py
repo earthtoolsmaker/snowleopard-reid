@@ -77,14 +77,16 @@ def generate_individual_metadata(
     images_per_location = {}
     images_per_body_part = {}
 
+    # Extract location from individual_dir path (database/{location}/{individual}/)
+    location = individual_dir.parent.name
+
     for image_path in sorted(image_files):
-        # Extract location and body_part from path structure: images/{location}/{body_part}/filename.jpg
+        # Extract body_part from path structure: images/{body_part}/filename.jpg
         relative_path = image_path.relative_to(images_dir)
         parts = relative_path.parts
 
-        if len(parts) >= 2:
-            location = parts[0]
-            body_part = parts[1]
+        if len(parts) >= 1:
+            body_part = parts[0]
         else:
             logging.warning(f"Unexpected path structure for {image_path}, skipping")
             continue
@@ -106,11 +108,10 @@ def generate_individual_metadata(
         num_keypoints = 0
 
         for extractor in available_extractors:
-            # Features follow same structure: features/{extractor}/{location}/{body_part}/filename.pt
+            # Features follow structure: features/{extractor}/{body_part}/filename.pt
             feature_path = (
                 features_dir
                 / extractor
-                / location
                 / body_part
                 / filename.replace(".jpg", ".pt")
             )
@@ -167,6 +168,7 @@ def generate_individual_metadata(
     metadata = {
         "individual_id": individual_id,
         "individual_name": individual_name,
+        "location": location,  # Add location field
         "reference_images": reference_images,
         "statistics": statistics,
     }
@@ -234,13 +236,15 @@ def generate_catalog_index(
     # Build individual list
     individuals = []
     for metadata in sorted(individual_metadatas, key=lambda m: m["individual_name"]):
+        location = metadata["location"]
         individual_entry = {
             "individual_id": metadata["individual_id"],
             "individual_name": metadata["individual_name"],
+            "location": location,
             "reference_count": metadata["statistics"]["total_reference_images"],
             "locations": metadata["statistics"]["locations_represented"],
             "body_parts": metadata["statistics"]["body_parts_represented"],
-            "metadata_path": f"database/{metadata['individual_name']}/metadata.yaml",
+            "metadata_path": f"database/{location}/{metadata['individual_name']}/metadata.yaml",
         }
         individuals.append(individual_entry)
 
@@ -283,14 +287,22 @@ def generate_catalog_metadata(
 
     logging.info(f"Generating metadata for catalog: {catalog_dir}")
 
-    # Find all individual directories
-    individual_dirs = [d for d in database_dir.iterdir() if d.is_dir()]
-    logging.info(f"Found {len(individual_dirs)} individual directories")
+    # Find all location directories first
+    location_dirs = [d for d in database_dir.iterdir() if d.is_dir()]
+    logging.info(f"Found {len(location_dirs)} location directories")
+
+    # Collect all individuals across locations
+    all_individual_dirs = []
+    for location_dir in location_dirs:
+        individual_dirs = [d for d in location_dir.iterdir() if d.is_dir()]
+        all_individual_dirs.extend(individual_dirs)
+
+    logging.info(f"Found {len(all_individual_dirs)} individual directories across all locations")
 
     # Detect available feature extractors
     available_extractors = []
-    if individual_dirs:
-        features_dir = individual_dirs[0] / "features"
+    if all_individual_dirs:
+        features_dir = all_individual_dirs[0] / "features"
         if features_dir.exists():
             available_extractors = [
                 d.name for d in features_dir.iterdir() if d.is_dir()
@@ -299,7 +311,7 @@ def generate_catalog_metadata(
 
     # Generate metadata for each individual
     individual_metadatas = []
-    for individual_dir in sorted(individual_dirs):
+    for individual_dir in sorted(all_individual_dirs):
         try:
             metadata = generate_individual_metadata(
                 individual_dir, database_dir, available_extractors
@@ -313,8 +325,9 @@ def generate_catalog_metadata(
                 yaml.dump(
                     metadata, f, default_flow_style=False, sort_keys=False, width=1000
                 )
+            location_name = individual_dir.parent.name
             logging.info(
-                f"Generated metadata for {metadata['individual_name']}: "
+                f"Generated metadata for {location_name}/{metadata['individual_name']}: "
                 f"{metadata['statistics']['total_reference_images']} images"
             )
         except Exception as e:

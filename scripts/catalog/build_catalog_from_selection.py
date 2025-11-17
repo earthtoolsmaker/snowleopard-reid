@@ -44,8 +44,8 @@ def build_catalog_structure(
         for individual, body_parts in individuals.items():
             stats["individuals"].add(individual)
 
-            # Create individual directory
-            individual_dir = catalog_dir / individual / "images" / location
+            # Create individual directory with location first
+            individual_dir = catalog_dir / location / individual / "images"
             if not dry_run:
                 individual_dir.mkdir(parents=True, exist_ok=True)
             else:

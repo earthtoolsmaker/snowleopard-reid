@@ -131,60 +131,64 @@ def extract_catalog_features(
         f"Initializing SIFT feature extractor (max_keypoints: {max_num_keypoints})"
     )
 
-    # Find all individual directories
-    individual_dirs = [d for d in catalog_dir.iterdir() if d.is_dir()]
-    logging.info(f"Found {len(individual_dirs)} individual directories")
+    # Find all location directories
+    location_dirs = [d for d in catalog_dir.iterdir() if d.is_dir()]
+    logging.info(f"Found {len(location_dirs)} location directories")
 
-    # Process each individual
+    # Process each location, then each individual
     total_images = 0
     total_keypoints = 0
 
-    for individual_dir in sorted(individual_dirs):
-        individual_name = individual_dir.name
-        images_dir = individual_dir / "images"
-        features_dir = individual_dir / "features" / extractor_name
+    for location_dir in sorted(location_dirs):
+        location_name = location_dir.name
+        individual_dirs = [d for d in location_dir.iterdir() if d.is_dir()]
 
-        if not images_dir.exists():
-            logging.warning(f"No images directory for {individual_name}, skipping")
-            continue
+        for individual_dir in sorted(individual_dirs):
+            individual_name = individual_dir.name
+            images_dir = individual_dir / "images"
+            features_dir = individual_dir / "features" / extractor_name
 
-        # Find all images (recursively to handle location/body_part structure)
-        image_files = list(images_dir.rglob("*.jpg"))
-        logging.info(f"Processing {individual_name}: {len(image_files)} images")
-
-        # Extract features for each image
-        for image_path in sorted(image_files):
-            # Construct output path maintaining location/body_part structure
-            relative_path = image_path.relative_to(images_dir)
-            output_path = features_dir / relative_path.with_suffix(".pt")
-
-            # Skip if features already exist
-            if output_path.exists():
-                logging.debug(f"Features already exist for {image_path.name}, skipping")
+            if not images_dir.exists():
+                logging.warning(f"No images directory for {location_name}/{individual_name}, skipping")
                 continue
 
-            # Extract features
-            try:
-                feats = extract_sift_features(
-                    image_path=image_path,
-                    max_num_keypoints=max_num_keypoints,
-                )
+            # Find all images (in body_part subdirectories)
+            image_files = list(images_dir.rglob("*.jpg"))
+            logging.info(f"Processing {location_name}/{individual_name}: {len(image_files)} images")
 
-                # Save features
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                torch.save(feats, output_path)
+            # Extract features for each image
+            for image_path in sorted(image_files):
+                # Construct output path maintaining body_part structure
+                relative_path = image_path.relative_to(images_dir)
+                output_path = features_dir / relative_path.with_suffix(".pt")
 
-                num_kpts = feats["keypoints"].shape[0]
-                logging.debug(
-                    f"Extracted features: {image_path.name} -> {num_kpts} keypoints"
-                )
+                # Skip if features already exist
+                if output_path.exists():
+                    logging.debug(f"Features already exist for {image_path.name}, skipping")
+                    continue
 
-                total_images += 1
-                total_keypoints += num_kpts
+                # Extract features
+                try:
+                    feats = extract_sift_features(
+                        image_path=image_path,
+                        max_num_keypoints=max_num_keypoints,
+                    )
 
-            except Exception as e:
-                logging.error(f"Failed to extract features from {image_path}: {e}")
-                continue
+                    # Save features
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    torch.save(feats, output_path)
+
+                    num_kpts = feats["keypoints"].shape[0]
+                    logging.debug(
+                        f"Extracted features: {image_path.name} -> {num_kpts} keypoints"
+                    )
+
+                    total_images += 1
+                    total_keypoints += num_kpts
+
+                except Exception as e:
+                    logging.error(f"Failed to extract features from {image_path}: {e}")
+                    continue
 
     # Print summary
     avg_keypoints = total_keypoints / total_images if total_images > 0 else 0
