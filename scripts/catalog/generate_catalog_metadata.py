@@ -110,10 +110,7 @@ def generate_individual_metadata(
         for extractor in available_extractors:
             # Features follow structure: features/{extractor}/{body_part}/filename.pt
             feature_path = (
-                features_dir
-                / extractor
-                / body_part
-                / filename.replace(".jpg", ".pt")
+                features_dir / extractor / body_part / filename.replace(".jpg", ".pt")
             )
             if feature_path.exists():
                 # Load feature file to get keypoint count
@@ -297,7 +294,9 @@ def generate_catalog_metadata(
         individual_dirs = [d for d in location_dir.iterdir() if d.is_dir()]
         all_individual_dirs.extend(individual_dirs)
 
-    logging.info(f"Found {len(all_individual_dirs)} individual directories across all locations")
+    logging.info(
+        f"Found {len(all_individual_dirs)} individual directories across all locations"
+    )
 
     # Detect available feature extractors
     available_extractors = []

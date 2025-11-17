@@ -149,12 +149,16 @@ def extract_catalog_features(
             features_dir = individual_dir / "features" / extractor_name
 
             if not images_dir.exists():
-                logging.warning(f"No images directory for {location_name}/{individual_name}, skipping")
+                logging.warning(
+                    f"No images directory for {location_name}/{individual_name}, skipping"
+                )
                 continue
 
             # Find all images (in body_part subdirectories)
             image_files = list(images_dir.rglob("*.jpg"))
-            logging.info(f"Processing {location_name}/{individual_name}: {len(image_files)} images")
+            logging.info(
+                f"Processing {location_name}/{individual_name}: {len(image_files)} images"
+            )
 
             # Extract features for each image
             for image_path in sorted(image_files):
@@ -164,7 +168,9 @@ def extract_catalog_features(
 
                 # Skip if features already exist
                 if output_path.exists():
-                    logging.debug(f"Features already exist for {image_path.name}, skipping")
+                    logging.debug(
+                        f"Features already exist for {image_path.name}, skipping"
+                    )
                     continue
 
                 # Extract features

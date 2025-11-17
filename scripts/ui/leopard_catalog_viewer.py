@@ -16,7 +16,6 @@ import argparse
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
 
 import gradio as gr
 import yaml
@@ -35,7 +34,7 @@ class AppConfig:
     port: int = 7860
 
 
-def load_catalog_index(catalog_root: Path) -> Dict:
+def load_catalog_index(catalog_root: Path) -> dict:
     """Load the catalog index YAML file.
 
     Args:
@@ -52,7 +51,7 @@ def load_catalog_index(catalog_root: Path) -> Dict:
         return yaml.safe_load(f)
 
 
-def load_individual_metadata(catalog_root: Path, metadata_path: str) -> Dict:
+def load_individual_metadata(catalog_root: Path, metadata_path: str) -> dict:
     """Load metadata for a specific individual.
 
     Args:
@@ -141,10 +140,10 @@ def create_catalog_browser_tab(config: AppConfig):
             gr.Markdown(
                 f"""
                 ### Catalog Statistics
-                - **Total Individuals:** {stats.get('total_individuals', 'N/A')}
-                - **Total Images:** {stats.get('total_reference_images', 'N/A')}
-                - **Locations:** {', '.join(stats.get('locations', []))}
-                - **Body Parts:** {', '.join(stats.get('body_parts', []))}
+                - **Total Individuals:** {stats.get("total_individuals", "N/A")}
+                - **Total Images:** {stats.get("total_reference_images", "N/A")}
+                - **Locations:** {", ".join(stats.get("locations", []))}
+                - **Body Parts:** {", ".join(stats.get("body_parts", []))}
                 """
             )
 
