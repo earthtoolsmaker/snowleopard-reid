@@ -1,0 +1,13 @@
+stages:
+  reorganize_locations:
+    cmd: uv run python scripts/data/reorganize_locations.py
+    deps:
+      - scripts/data/reorganize_locations.py
+      - data/01_raw/locations
+      - data/02_processed/config/naryn/individuals.yaml
+      - data/02_processed/config/naryn/mappings.yaml
+      - data/02_processed/config/sarychat/individuals.yaml
+      - data/02_processed/config/sarychat/mappings.yaml
+    outs:
+      - data/02_processed/locations
+    desc: "Reorganize snow leopard images from raw data into processed structure using canonical individual configs"
