@@ -1,0 +1,101 @@
+selections:
+  naryn:
+    aika:
+      head:
+      - "data/02_processed/cropped/leopards/naryn/aika/head/05070009 Aika_000.jpg"
+      left_flank:
+      - "data/02_processed/cropped/leopards/naryn/aika/left_flank/04200898 Aika_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/aika/left_flank/06290386 Aika (2)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/aika/left_flank/09050346 Aika_000.jpg"
+      right_flank:
+      - "data/02_processed/cropped/leopards/naryn/aika/right_flank/03110480 AIKA_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/aika/right_flank/07090903 Aika_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/aika/right_flank/10170611 Aika_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/aika/right_flank/12240597 aika_000.jpg"
+      tail:
+      - "data/02_processed/cropped/leopards/naryn/aika/right_flank/04290435 Aika_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/aika/tail/05070009 Aika_000.jpg"
+    ayana:
+      head:
+      - "data/02_processed/cropped/leopards/naryn/ayana/head/08180335 Ayana_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayana/head/08180339 Ayana_000.jpg"
+      left_flank:
+      - "data/02_processed/cropped/leopards/naryn/ayana/left_flank/01100329 Ayana_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayana/left_flank/01100330 Ayana_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayana/left_flank/04270967 Ayana_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayana/left_flank/09170316 Ayana_000.jpg"
+      right_flank:
+      - "data/02_processed/cropped/leopards/naryn/ayana/right_flank/09100381 Ayana_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayana/right_flank/09100382 Ayana_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayana/right_flank/09100386 Ayana_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayana/right_flank/11260032 Ayana_000.jpg"
+      tail:
+      - "data/02_processed/cropped/leopards/naryn/ayana/left_flank/01100331 Ayana_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayana/left_flank/04270967 Ayana_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayana/right_flank/08010843 Ayana_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayana/right_flank/11260033 Ayana_000.jpg"
+    ayima:
+      head:
+      - "data/02_processed/cropped/leopards/naryn/ayima/head/09020041 Ayima (2)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/head/09110477 Ayima (1)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/head/IMG_1125 (5) Ayima_000.jpg"
+      left_flank:
+      - "data/02_processed/cropped/leopards/naryn/ayima/left_flank/09110477 Ayima (2)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/left_flank/09110477 Ayima (3)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/left_flank/IMG_6886 Ayima_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/left_flank/IMG_7176 Ayima_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/left_flank/IMG_7190 Ayima - Copie_000.jpg"
+      right_flank:
+      - "data/02_processed/cropped/leopards/naryn/ayima/right_flank/IMG_1125 (2) Ayima_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/right_flank/IMG_7183 Ayima_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/right_flank/IMG_7401 Ayima (1)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/right_flank/IMG_8514 Ayima  (1)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/right_flank/IMG_8514 Ayima (3)_000.jpg"
+      tail:
+      - "data/02_processed/cropped/leopards/naryn/ayima/tail/11060969 Ayima (2)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/tail/IMG_7177 Ayima(1)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/tail/IMG_7190 Ayima - Copie - Copie(1)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/ayima/tail/IMG_7401 Ayima (2)_000.jpg"
+    karindas:
+      head:
+      - "data/02_processed/cropped/leopards/naryn/karindas/head/06270851 Karindas_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/head/06290812 Karindas_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/head/11080714 Karindas_000.jpg"
+      left_flank:
+      - "data/02_processed/cropped/leopards/naryn/karindas/left_flank/07130059 Karindas_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/left_flank/08190123 Karindas_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/left_flank/08230567 Karindas (3)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/left_flank/09210599 Karindas_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/left_flank/11040132 Karindas_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/left_flank/11040191 Karindas_000.jpg"
+      right_flank:
+      - "data/02_processed/cropped/leopards/naryn/karindas/right_flank/02160132 Karindas + trio_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/right_flank/05140801 Karindas_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/right_flank/05140803 Karindas_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/right_flank/08230567 Karindas (2)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/right_flank/11040280 Karindas_000.jpg"
+      tail:
+      - "data/02_processed/cropped/leopards/naryn/karindas/tail/08230567 Karindas (4)_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/tail/09210600 Karindas_000.jpg"
+      - "data/02_processed/cropped/leopards/naryn/karindas/tail/11040166 Karindas_001.jpg"
+  sarychat:
+    agim:
+      head:
+      - "data/02_processed/cropped/leopards/sarychat/agim/head/IMG_0884 (2) Agim_000.jpg"
+      - "data/02_processed/cropped/leopards/sarychat/agim/head/IMG_0962 Agim (6)_000.jpg"
+      - "data/02_processed/cropped/leopards/sarychat/agim/head/IMG_0962 Agim (7)_000.jpg"
+      left_flank:
+      - "data/02_processed/cropped/leopards/sarychat/agim/left_flank/09130066 Agim_000.jpg"
+      - "data/02_processed/cropped/leopards/sarychat/agim/left_flank/IMG_0485 Agim_000.jpg"
+      - "data/02_processed/cropped/leopards/sarychat/agim/left_flank/IMG_1456 Agim (1)_000.jpg"
+      - "data/02_processed/cropped/leopards/sarychat/agim/left_flank/IMG_3892 Agim_000.jpg"
+      misc:
+      - "data/02_processed/cropped/leopards/sarychat/agim/misc/IMG_2698 Agim cicatrice_000.jpg"
+      right_flank:
+      - "data/02_processed/cropped/leopards/sarychat/agim/right_flank/09130077 Agim (1)_000.jpg"
+      - "data/02_processed/cropped/leopards/sarychat/agim/right_flank/10150868 Agim_000.jpg"
+      - "data/02_processed/cropped/leopards/sarychat/agim/right_flank/10150880  Agim_000.jpg"
+      - "data/02_processed/cropped/leopards/sarychat/agim/right_flank/IMG_0515 Agim_000.jpg"
+      tail:
+      - "data/02_processed/cropped/leopards/sarychat/agim/tail/09130077 Agim (2)_000.jpg"
+      - "data/02_processed/cropped/leopards/sarychat/agim/tail/IMG_2508 Agim_000.jpg"
