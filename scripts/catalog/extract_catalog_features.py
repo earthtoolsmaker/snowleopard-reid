@@ -27,7 +27,6 @@ from pathlib import Path
 import cv2
 import numpy as np
 import torch
-from PIL import Image
 
 
 def setup_logging(verbose: bool) -> None:
@@ -116,7 +115,9 @@ def extract_catalog_features(
 
     # Validate parameters
     if extractor_name.lower() != "sift":
-        raise ValueError(f"Currently only 'sift' extractor is supported, got: {extractor_name}")
+        raise ValueError(
+            f"Currently only 'sift' extractor is supported, got: {extractor_name}"
+        )
 
     if not (512 <= max_num_keypoints <= 4096):
         raise ValueError(
@@ -126,7 +127,9 @@ def extract_catalog_features(
     if not catalog_dir.exists():
         raise FileNotFoundError(f"Catalog directory not found: {catalog_dir}")
 
-    logging.info(f"Initializing SIFT feature extractor (max_keypoints: {max_num_keypoints})")
+    logging.info(
+        f"Initializing SIFT feature extractor (max_keypoints: {max_num_keypoints})"
+    )
 
     # Find all individual directories
     individual_dirs = [d for d in catalog_dir.iterdir() if d.is_dir()]
@@ -172,7 +175,9 @@ def extract_catalog_features(
                 torch.save(feats, output_path)
 
                 num_kpts = feats["keypoints"].shape[0]
-                logging.debug(f"Extracted features: {image_path.name} -> {num_kpts} keypoints")
+                logging.debug(
+                    f"Extracted features: {image_path.name} -> {num_kpts} keypoints"
+                )
 
                 total_images += 1
                 total_keypoints += num_kpts

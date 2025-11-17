@@ -34,9 +34,9 @@ import yaml
 
 def str_presenter(dumper, data):
     """Custom YAML string representer that quotes strings containing spaces."""
-    if ' ' in data:
-        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='"')
-    return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+    if " " in data:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
 
 def setup_logging(verbose: bool) -> None:
@@ -107,16 +107,26 @@ def generate_individual_metadata(
 
         for extractor in available_extractors:
             # Features follow same structure: features/{extractor}/{location}/{body_part}/filename.pt
-            feature_path = features_dir / extractor / location / body_part / filename.replace(".jpg", ".pt")
+            feature_path = (
+                features_dir
+                / extractor
+                / location
+                / body_part
+                / filename.replace(".jpg", ".pt")
+            )
             if feature_path.exists():
                 # Load feature file to get keypoint count
                 try:
-                    feats = torch.load(feature_path, map_location="cpu", weights_only=True)
+                    feats = torch.load(
+                        feature_path, map_location="cpu", weights_only=True
+                    )
                     kpt_count = feats["keypoints"].shape[0]
                     features_dict[extractor] = str(
                         feature_path.relative_to(catalog_root)
                     )
-                    if extractor == available_extractors[0]:  # Use first extractor for count
+                    if (
+                        extractor == available_extractors[0]
+                    ):  # Use first extractor for count
                         num_keypoints = kpt_count
                     total_keypoints_by_extractor[extractor] += kpt_count
                 except Exception as e:
@@ -200,7 +210,9 @@ def generate_catalog_index(
         "locations": sorted(all_locations),
         "body_parts": sorted(all_body_parts),
         "images_per_individual": {
-            "mean": sum(images_per_individual) / len(images_per_individual) if images_per_individual else 0,
+            "mean": sum(images_per_individual) / len(images_per_individual)
+            if images_per_individual
+            else 0,
             "min": min(images_per_individual) if images_per_individual else 0,
             "max": max(images_per_individual) if images_per_individual else 0,
         },
@@ -215,9 +227,7 @@ def generate_catalog_index(
 
     for extractor in sorted(all_extractors):
         key = f"total_keypoints_{extractor}"
-        total_kpts = sum(
-            m["statistics"].get(key, 0) for m in individual_metadatas
-        )
+        total_kpts = sum(m["statistics"].get(key, 0) for m in individual_metadatas)
         if total_kpts > 0:
             statistics[key] = total_kpts
 
@@ -282,7 +292,9 @@ def generate_catalog_metadata(
     if individual_dirs:
         features_dir = individual_dirs[0] / "features"
         if features_dir.exists():
-            available_extractors = [d.name for d in features_dir.iterdir() if d.is_dir()]
+            available_extractors = [
+                d.name for d in features_dir.iterdir() if d.is_dir()
+            ]
     logging.info(f"Available feature extractors: {available_extractors}")
 
     # Generate metadata for each individual
@@ -298,7 +310,9 @@ def generate_catalog_metadata(
             yaml.add_representer(str, str_presenter)
             metadata_path = individual_dir / "metadata.yaml"
             with open(metadata_path, "w") as f:
-                yaml.dump(metadata, f, default_flow_style=False, sort_keys=False, width=1000)
+                yaml.dump(
+                    metadata, f, default_flow_style=False, sort_keys=False, width=1000
+                )
             logging.info(
                 f"Generated metadata for {metadata['individual_name']}: "
                 f"{metadata['statistics']['total_reference_images']} images"
@@ -315,20 +329,26 @@ def generate_catalog_metadata(
     yaml.add_representer(str, str_presenter)
     index_path = catalog_dir / "catalog_index.yaml"
     with open(index_path, "w") as f:
-        yaml.dump(catalog_index, f, default_flow_style=False, sort_keys=False, width=1000)
+        yaml.dump(
+            catalog_index, f, default_flow_style=False, sort_keys=False, width=1000
+        )
 
-    logging.info(f"\nCatalog metadata generation complete!")
-    logging.info(f"  Total individuals: {catalog_index['statistics']['total_individuals']}")
-    logging.info(f"  Total images: {catalog_index['statistics']['total_reference_images']}")
+    logging.info("\nCatalog metadata generation complete!")
+    logging.info(
+        f"  Total individuals: {catalog_index['statistics']['total_individuals']}"
+    )
+    logging.info(
+        f"  Total images: {catalog_index['statistics']['total_reference_images']}"
+    )
     logging.info(f"  Locations: {', '.join(catalog_index['statistics']['locations'])}")
-    logging.info(f"  Body parts: {', '.join(catalog_index['statistics']['body_parts'])}")
+    logging.info(
+        f"  Body parts: {', '.join(catalog_index['statistics']['body_parts'])}"
+    )
     logging.info(f"\nCatalog index saved to: {index_path}")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate catalog metadata files"
-    )
+    parser = argparse.ArgumentParser(description="Generate catalog metadata files")
     parser.add_argument(
         "--catalog-dir",
         type=Path,

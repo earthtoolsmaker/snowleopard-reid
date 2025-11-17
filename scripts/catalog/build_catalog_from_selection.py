@@ -123,7 +123,9 @@ def main():
     if not selections:
         raise ValueError("No selections found in selection.yaml")
 
-    print(f"{'DRY RUN - ' if args.dry_run else ''}Building catalog at: {args.catalog_dir}")
+    print(
+        f"{'DRY RUN - ' if args.dry_run else ''}Building catalog at: {args.catalog_dir}"
+    )
 
     # Build catalog structure
     build_catalog_structure(selections, args.catalog_dir, dry_run=args.dry_run)

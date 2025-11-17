@@ -14,16 +14,16 @@ selections:
 
 import argparse
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 
 import yaml
 
 
 def str_presenter(dumper, data):
     """Custom YAML string representer that quotes strings containing spaces."""
-    if ' ' in data:
-        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='"')
-    return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+    if " " in data:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
 
 def scan_catalog_directory(catalog_dir: Path, cropped_dir: Path) -> Dict:
@@ -66,7 +66,11 @@ def scan_catalog_directory(catalog_dir: Path, cropped_dir: Path) -> Dict:
                 for image_file in sorted(body_part_dir.glob("*.jpg")):
                     # Construct path to original cropped image
                     cropped_path = (
-                        cropped_dir / location / individual / body_part / image_file.name
+                        cropped_dir
+                        / location
+                        / individual
+                        / body_part
+                        / image_file.name
                     )
 
                     # Verify the image exists in the cropped directory
@@ -82,13 +86,17 @@ def scan_catalog_directory(catalog_dir: Path, cropped_dir: Path) -> Dict:
                                 if alt_body_part.is_dir():
                                     alt_path = alt_body_part / image_file.name
                                     if alt_path.exists():
-                                        print(f"Info: Found {image_file.name} in {alt_body_part.name}/ instead of {body_part}/")
+                                        print(
+                                            f"Info: Found {image_file.name} in {alt_body_part.name}/ instead of {body_part}/"
+                                        )
                                         image_paths.append(str(alt_path))
                                         found = True
                                         break
 
                         if not found:
-                            print(f"Warning: Could not find {image_file.name} for {individual} in any body part folder")
+                            print(
+                                f"Warning: Could not find {image_file.name} for {individual} in any body part folder"
+                            )
 
                 # Only add body part if it has images
                 if image_paths:
@@ -154,7 +162,7 @@ def main():
         for images in individual_data.values()
     )
 
-    print(f"\nFound:")
+    print("\nFound:")
     print(f"  - {len(selections_data['selections'])} locations")
     print(f"  - {total_individuals} individuals")
     print(f"  - {total_images} images")
