@@ -1,4 +1,4 @@
-.PHONY: help install lint format check
+.PHONY: help install lint format check catalog-viewer
 
 .DEFAULT_GOAL := help
 
@@ -18,3 +18,6 @@ format: ## Run ruff formatter
 check: ## Run ruff check and format in check mode (no changes)
 	uv run ruff check .
 	uv run ruff format --check .
+
+catalog-viewer: ## Launch the snow leopard catalog viewer UI
+	uv run python scripts/ui/leopard_catalog_viewer.py --catalog-root data/08_catalog/v1.0 --port 7860
