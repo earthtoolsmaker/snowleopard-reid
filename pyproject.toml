@@ -15,3 +15,8 @@ snowleopard-reid = "snowleopard_reid:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "dvc[s3]>=3.64.0",
+]
