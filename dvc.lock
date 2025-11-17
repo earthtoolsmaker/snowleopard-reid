@@ -18,19 +18,19 @@ stages:
       size: 330
     - path: data/02_processed/config/sarychat/individuals.yaml
       hash: md5
-      md5: a304454a5c7961fe224a3edfd06c6cf6
-      size: 583
+      md5: 125eff4a1ad2befd7c48a64b0d9299fe
+      size: 553
     - path: data/02_processed/config/sarychat/mappings.yaml
       hash: md5
-      md5: 5aad9f85959ee970568db96ced8fb314
-      size: 925
+      md5: 8a2adbbb8b46a78e096fad652963ac98
+      size: 884
     - path: scripts/data/reorganize_locations.py
       hash: md5
-      md5: c60251ea2b7b55e5d657ac0831e2c248
-      size: 12202
+      md5: d16dc398900546cde6082308f3a6486f
+      size: 12254
     outs:
     - path: data/02_processed/locations
       hash: md5
-      md5: e9f1dc79cdeedeb4ceea19cf9a3e1d6c.dir
-      size: 1938220080
-      nfiles: 910
+      md5: cfaff470ccf1a5499ba86be17f42a087.dir
+      size: 1936308169
+      nfiles: 908
