@@ -69,7 +69,7 @@ def load_individual_metadata(catalog_root: Path, metadata_path: str) -> dict:
         return yaml.safe_load(f)
 
 
-def create_leopard_tab(leopard_metadata: Dict, config: AppConfig):
+def create_leopard_tab(leopard_metadata: dict, config: AppConfig):
     """Create a tab for displaying a single leopard's images.
 
     Args:
@@ -98,8 +98,8 @@ def create_leopard_tab(leopard_metadata: Dict, config: AppConfig):
 
             try:
                 img = Image.open(img_path)
-                # Caption format: "location - body_part"
-                caption = f"{location} - {body_part}"
+                # Caption format: just body_part (location is already in tab)
+                caption = body_part
                 gallery_data.append((img, caption))
             except Exception as e:
                 logger.error(f"Error loading image {img_path}: {e}")

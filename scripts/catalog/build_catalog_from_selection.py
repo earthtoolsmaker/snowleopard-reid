@@ -15,13 +15,12 @@ database/
 import argparse
 import shutil
 from pathlib import Path
-from typing import Dict
 
 import yaml
 
 
 def build_catalog_structure(
-    selections: Dict, catalog_dir: Path, dry_run: bool = False
+    selections: dict, catalog_dir: Path, dry_run: bool = False
 ) -> None:
     """Build catalog directory structure and copy images.
 

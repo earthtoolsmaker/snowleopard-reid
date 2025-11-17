@@ -14,7 +14,6 @@ selections:
 
 import argparse
 from pathlib import Path
-from typing import Dict
 
 import yaml
 
@@ -26,7 +25,7 @@ def str_presenter(dumper, data):
     return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
 
-def scan_catalog_directory(catalog_dir: Path, cropped_dir: Path) -> Dict:
+def scan_catalog_directory(catalog_dir: Path, cropped_dir: Path) -> dict:
     """Scan catalog directory and map to cropped leopard images.
 
     Args:
