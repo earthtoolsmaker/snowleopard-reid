@@ -36,3 +36,25 @@ stages:
       md5: 082552e9df22ae9e4786d9b65be68ea0.dir
       size: 1936317980
       nfiles: 909
+  grounding_dino_detection:
+    cmd: uv run python scripts/models/grounding_dino.py --input-dir 
+      data/02_processed/locations --output-dir 
+      data/05_model_output/grounding_dino --text-prompt "a snow leopard." 
+      --model-id IDEA-Research/grounding-dino-base --box-threshold 0.30 
+      --text-threshold 0.20
+    deps:
+    - path: data/02_processed/locations
+      hash: md5
+      md5: 082552e9df22ae9e4786d9b65be68ea0.dir
+      size: 1936317980
+      nfiles: 909
+    - path: scripts/models/grounding_dino.py
+      hash: md5
+      md5: 5424263ead9d5765cefa17ca3336ce96
+      size: 15400
+    outs:
+    - path: data/05_model_output/grounding_dino
+      hash: md5
+      md5: 49e4b24a348f63bc7a93a9832d5f9de6.dir
+      size: 310549219
+      nfiles: 1816
