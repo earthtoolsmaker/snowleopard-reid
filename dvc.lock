@@ -26,11 +26,11 @@ stages:
       size: 884
     - path: scripts/data/reorganize_locations.py
       hash: md5
-      md5: d16dc398900546cde6082308f3a6486f
-      size: 12254
+      md5: 5ea198f09c96c54dc9c391f1b9ba7dcc
+      size: 14960
     outs:
     - path: data/02_processed/locations
       hash: md5
-      md5: cfaff470ccf1a5499ba86be17f42a087.dir
-      size: 1936308169
-      nfiles: 908
+      md5: 082552e9df22ae9e4786d9b65be68ea0.dir
+      size: 1936317980
+      nfiles: 909

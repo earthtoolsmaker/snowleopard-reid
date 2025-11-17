@@ -268,6 +268,74 @@ def reorganize_data(
     return stats
 
 
+def generate_manifest(output_dir: Path) -> dict:
+    """
+    Generate a manifest of organized data.
+
+    Args:
+        output_dir: Path to data/02_processed/locations/
+
+    Returns:
+        Dictionary with manifest data
+    """
+    manifest = {
+        "metadata": {
+            "total_images": 0,
+            "total_individuals": 0,
+        },
+        "locations": {},
+    }
+
+    if not output_dir.exists():
+        return manifest
+
+    # Process each location
+    for location_dir in sorted(output_dir.iterdir()):
+        if not location_dir.is_dir():
+            continue
+
+        location_name = location_dir.name
+        location_data = {
+            "total_images": 0,
+            "total_individuals": 0,
+            "individuals": {},
+        }
+
+        # Process each individual
+        for individual_dir in sorted(location_dir.iterdir()):
+            if not individual_dir.is_dir():
+                continue
+
+            individual_name = individual_dir.name
+            individual_data = {"total": 0, "body_parts": {}}
+
+            # Count images per body part
+            for body_part_dir in sorted(individual_dir.iterdir()):
+                if not body_part_dir.is_dir():
+                    continue
+
+                body_part_name = body_part_dir.name
+                image_count = sum(1 for f in body_part_dir.iterdir() if f.is_file())
+
+                if image_count > 0:
+                    individual_data["body_parts"][body_part_name] = image_count
+                    individual_data["total"] += image_count
+
+            if individual_data["total"] > 0:
+                location_data["individuals"][individual_name] = individual_data
+                location_data["total_images"] += individual_data["total"]
+                location_data["total_individuals"] += 1
+
+        if location_data["total_individuals"] > 0:
+            manifest["locations"][location_name] = location_data
+            manifest["metadata"]["total_images"] += location_data["total_images"]
+            manifest["metadata"]["total_individuals"] += location_data[
+                "total_individuals"
+            ]
+
+    return manifest
+
+
 def print_summary(stats: dict):
     """Print summary of processing results."""
     print("\n" + "=" * 70)
@@ -372,6 +440,21 @@ def main():
 
     # Print summary
     print_summary(stats)
+
+    # Generate manifest (only if not dry run)
+    if not args.dry_run:
+        print("\nGenerating manifest...")
+        manifest = generate_manifest(args.output_dir)
+        manifest_path = args.output_dir / "manifest.yaml"
+
+        with open(manifest_path, "w") as f:
+            yaml.dump(manifest, f, default_flow_style=False, sort_keys=False)
+
+        print(f"✓ Manifest written to {manifest_path}")
+        print(
+            f"  Total: {manifest['metadata']['total_images']} images, "
+            f"{manifest['metadata']['total_individuals']} individuals"
+        )
 
     return 0
 
