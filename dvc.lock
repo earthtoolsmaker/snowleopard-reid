@@ -58,3 +58,54 @@ stages:
       md5: 49e4b24a348f63bc7a93a9832d5f9de6.dir
       size: 310549219
       nfiles: 1816
+  sam_hq_segmentation:
+    cmd: uv run python scripts/models/sam_hq.py --input-dir 
+      data/02_processed/locations --predictions-dir 
+      data/05_model_output/grounding_dino/predictions --output-dir 
+      data/05_model_output/sam_hq --checkpoint 
+      data/04_models/SAM_HQ/sam_hq_vit_l.pth --model-type vit_l
+    deps:
+    - path: data/02_processed/locations
+      hash: md5
+      md5: 082552e9df22ae9e4786d9b65be68ea0.dir
+      size: 1936317980
+      nfiles: 909
+    - path: data/04_models/SAM_HQ/sam_hq_vit_l.pth
+      hash: md5
+      md5: 08947267966e4264fb39523eccc33f86
+      size: 1254865805
+    - path: data/05_model_output/grounding_dino
+      hash: md5
+      md5: 49e4b24a348f63bc7a93a9832d5f9de6.dir
+      size: 310549219
+      nfiles: 1816
+    - path: scripts/models/sam_hq.py
+      hash: md5
+      md5: d434be67c9fd2774623e4d557186e936
+      size: 16531
+    outs:
+    - path: data/05_model_output/sam_hq
+      hash: md5
+      md5: 0733a9d015aaa6f5e717969df6e874c4.dir
+      size: 320102750
+      nfiles: 2753
+  crop_masks:
+    cmd: uv run python scripts/data/crop_leopard_masks.py --sam-output-dir 
+      data/05_model_output/sam_hq --output-dir 
+      data/02_processed/cropped/leopards --padding 10
+    deps:
+    - path: data/05_model_output/sam_hq
+      hash: md5
+      md5: 0733a9d015aaa6f5e717969df6e874c4.dir
+      size: 320102750
+      nfiles: 2753
+    - path: scripts/data/crop_leopard_masks.py
+      hash: md5
+      md5: ff7ab3b01b1003062b09750dda67817e
+      size: 7054
+    outs:
+    - path: data/02_processed/cropped/leopards
+      hash: md5
+      md5: d4444cdb7522271639b33213f4e1537a.dir
+      size: 235758260
+      nfiles: 934

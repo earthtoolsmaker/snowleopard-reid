@@ -31,3 +31,33 @@ stages:
     outs:
       - data/05_model_output/grounding_dino
     desc: "Detect snow leopards in images using GroundingDINO zero-shot object detection"
+
+  sam_hq_segmentation:
+    cmd: >-
+      uv run python scripts/models/sam_hq.py
+      --input-dir data/02_processed/locations
+      --predictions-dir data/05_model_output/grounding_dino/predictions
+      --output-dir data/05_model_output/sam_hq
+      --checkpoint data/04_models/SAM_HQ/sam_hq_vit_l.pth
+      --model-type vit_l
+    deps:
+      - scripts/models/sam_hq.py
+      - data/02_processed/locations
+      - data/05_model_output/grounding_dino
+      - data/04_models/SAM_HQ/sam_hq_vit_l.pth
+    outs:
+      - data/05_model_output/sam_hq
+    desc: "Generate high-quality segmentation masks using SAM HQ vit_l (Large) with GroundingDINO bounding boxes as prompts"
+
+  crop_masks:
+    cmd: >-
+      uv run python scripts/data/crop_leopard_masks.py
+      --sam-output-dir data/05_model_output/sam_hq
+      --output-dir data/02_processed/cropped/leopards
+      --padding 10
+    deps:
+      - scripts/data/crop_leopard_masks.py
+      - data/05_model_output/sam_hq
+    outs:
+      - data/02_processed/cropped/leopards
+    desc: "Crop individual snow leopards from images using SAM HQ masks with black background for downstream processing"
