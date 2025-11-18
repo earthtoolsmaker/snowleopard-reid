@@ -6,6 +6,8 @@ dist/
 wheels/
 *.egg-info
 
+yolo*.pt
+
 # Virtual environments
 .venv
 

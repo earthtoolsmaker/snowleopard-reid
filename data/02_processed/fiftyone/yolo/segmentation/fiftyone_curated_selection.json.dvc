@@ -1,0 +1,5 @@
+outs:
+- md5: 73f49a0c042bf62bd08ae764c3ac3d75
+  size: 108415
+  hash: md5
+  path: fiftyone_curated_selection.json
