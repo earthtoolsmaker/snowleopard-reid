@@ -45,7 +45,13 @@ import torch
 import yaml
 from PIL import Image
 
-from snowleopard_reid.catalog import get_catalog_metadata_for_id, load_catalog_index
+from snowleopard_reid.catalog import (
+    get_available_body_parts,
+    get_available_locations,
+    get_catalog_metadata_for_id,
+    load_catalog_index,
+    load_leopard_metadata,
+)
 from snowleopard_reid.pipeline.stages import (
     run_feature_extraction_stage,
     run_matching_stage,
@@ -214,18 +220,27 @@ def initialize_models(config: AppConfig):
     LOADED_MODELS["yolo"] = yolo_model
     logger.info("YOLO model loaded successfully")
 
-    # Store device info
+    # Store device info and catalog root for callbacks
     LOADED_MODELS["device"] = device
+    LOADED_MODELS["catalog_root"] = config.catalog_root
 
     logger.info("Models initialized successfully")
 
 
-def run_identification(image, extractor: str, config: AppConfig):
+def run_identification(
+    image,
+    extractor: str,
+    selected_locations: list[str],
+    selected_body_parts: list[str],
+    config: AppConfig,
+):
     """Run snow leopard identification pipeline on uploaded image.
 
     Args:
         image: PIL Image from Gradio upload
         extractor: Feature extractor to use ('sift', 'superpoint', 'disk', 'aliked')
+        selected_locations: List of selected locations (includes "all" for no filtering)
+        selected_body_parts: List of selected body parts (includes "all" for no filtering)
         config: Application configuration
 
     Returns:
@@ -240,6 +255,29 @@ def run_identification(image, extractor: str, config: AppConfig):
             [],
             gr.update(visible=False),
         )
+
+    # Convert filter selections to None if "all" is selected
+    filter_locations = (
+        None
+        if not selected_locations or "all" in selected_locations
+        else selected_locations
+    )
+    filter_body_parts = (
+        None
+        if not selected_body_parts or "all" in selected_body_parts
+        else selected_body_parts
+    )
+
+    # Log applied filters
+    if filter_locations or filter_body_parts:
+        filter_desc = []
+        if filter_locations:
+            filter_desc.append(f"locations: {', '.join(filter_locations)}")
+        if filter_body_parts:
+            filter_desc.append(f"body parts: {', '.join(filter_body_parts)}")
+        logger.info(f"Applied filters - {' | '.join(filter_desc)}")
+    else:
+        logger.info("No filters applied - matching against entire catalog")
 
     try:
         # Create temporary directory for this query
@@ -331,6 +369,8 @@ def run_identification(image, extractor: str, config: AppConfig):
             device=device,
             query_image_path=str(cropped_path),
             pairwise_output_dir=pairwise_dir,
+            filter_locations=filter_locations,
+            filter_body_parts=filter_body_parts,
         )
 
         matches = match_stage["data"]["matches"]
@@ -448,8 +488,10 @@ def run_identification(image, extractor: str, config: AppConfig):
                 ]
             )
 
-        # Store match visualizations and temp_dir in global state
+        # Store match visualizations, enriched matches, filters, and temp_dir in global state
         LOADED_MODELS["current_match_visualizations"] = match_visualizations
+        LOADED_MODELS["current_enriched_matches"] = matches
+        LOADED_MODELS["current_filter_body_parts"] = filter_body_parts
         LOADED_MODELS["current_temp_dir"] = temp_dir
 
         return (
@@ -501,7 +543,10 @@ def create_segmentation_viz(image_path, mask):
 
 
 def on_match_selected(evt: gr.SelectData):
-    """Handle selection of a match from the dataset table."""
+    """Handle selection of a match from the dataset table.
+
+    Returns visualization, header, indicators, and galleries organized by body part.
+    """
     # evt.index is [row, col] for Dataframe, we want row
     if isinstance(evt.index, (list, tuple)):
         selected_row = evt.index[0]
@@ -510,12 +555,173 @@ def on_match_selected(evt: gr.SelectData):
 
     selected_rank = selected_row + 1  # Ranks are 1-indexed
 
+    # Get stored data from global state
     match_visualizations = LOADED_MODELS.get("current_match_visualizations", {})
+    enriched_matches = LOADED_MODELS.get("current_enriched_matches", [])
+    filter_body_parts = LOADED_MODELS.get("current_filter_body_parts")
+    catalog_root = LOADED_MODELS.get("catalog_root")
 
-    if selected_rank in match_visualizations:
-        return gr.update(value=match_visualizations[selected_rank], visible=True)
+    # Find the selected match
+    selected_match = None
+    for match in enriched_matches:
+        if match["rank"] == selected_rank:
+            selected_match = match
+            break
+
+    if not selected_match or selected_rank not in match_visualizations:
+        # Return empty updates for all 12 outputs
+        return (
+            gr.update(visible=False),  # 1. visualization
+            gr.update(value=""),  # 2. header
+            gr.update(value=""),  # 3. head indicator
+            gr.update(value=""),  # 4. left_flank indicator
+            gr.update(value=""),  # 5. right_flank indicator
+            gr.update(value=""),  # 6. tail indicator
+            gr.update(value=""),  # 7. misc indicator
+            gr.update(value=[]),  # 8. head gallery
+            gr.update(value=[]),  # 9. left_flank gallery
+            gr.update(value=[]),  # 10. right_flank gallery
+            gr.update(value=[]),  # 11. tail gallery
+            gr.update(value=[]),  # 12. misc gallery
+        )
+
+    # Get visualization
+    match_viz = match_visualizations[selected_rank]
+
+    # Create dynamic header with leopard name
+    leopard_name = selected_match["leopard_name"]
+    header_text = f"## Reference Images for {leopard_name.title()}"
+
+    # Load galleries organized by body part
+    galleries = {}
+    if catalog_root:
+        try:
+            # Extract location from match filepath
+            location = None
+            filepath = Path(selected_match["filepath"])
+            parts = filepath.parts
+            if "database" in parts:
+                db_idx = parts.index("database")
+                if db_idx + 1 < len(parts):
+                    location = parts[db_idx + 1]
+
+            galleries = load_matched_individual_gallery_by_body_part(
+                catalog_root=catalog_root,
+                leopard_name=leopard_name,
+                location=location,
+            )
+        except Exception as e:
+            logger.error(f"Error loading gallery for {leopard_name}: {e}")
+            # Initialize empty galleries on error
+            galleries = {
+                "head": [],
+                "left_flank": [],
+                "right_flank": [],
+                "tail": [],
+                "misc": [],
+            }
+
+    # Create emoji indicators for filtered body parts
+    def get_indicator(body_part: str) -> str:
+        """Return ⭐ if body part was in filter, empty string otherwise."""
+        if filter_body_parts and body_part in filter_body_parts:
+            return "⭐"
+        return ""
+
+    return (
+        gr.update(value=match_viz, visible=True),  # 1. visualization
+        gr.update(value=header_text),  # 2. header
+        gr.update(value=get_indicator("head")),  # 3. head indicator
+        gr.update(value=get_indicator("left_flank")),  # 4. left_flank indicator
+        gr.update(value=get_indicator("right_flank")),  # 5. right_flank indicator
+        gr.update(value=get_indicator("tail")),  # 6. tail indicator
+        gr.update(value=get_indicator("misc")),  # 7. misc indicator
+        gr.update(value=galleries.get("head", [])),  # 8. head gallery
+        gr.update(value=galleries.get("left_flank", [])),  # 9. left_flank gallery
+        gr.update(value=galleries.get("right_flank", [])),  # 10. right_flank gallery
+        gr.update(value=galleries.get("tail", [])),  # 11. tail gallery
+        gr.update(value=galleries.get("misc", [])),  # 12. misc gallery
+    )
+
+
+def load_matched_individual_gallery_by_body_part(
+    catalog_root: Path,
+    leopard_name: str,
+    location: str | None = None,
+) -> dict[str, list[tuple]]:
+    """Load all images for a matched individual organized by body part.
+
+    Args:
+        catalog_root: Path to catalog root directory
+        leopard_name: Name of the matched individual (e.g., "karindas")
+        location: Geographic location (e.g., "naryn")
+
+    Returns:
+        Dict mapping body part to list of (PIL.Image, caption) tuples:
+        {
+            "head": [(img1, caption1), (img2, caption2), ...],
+            "left_flank": [...],
+            "right_flank": [...],
+            "tail": [...],
+            "misc": [...]
+        }
+    """
+    # Initialize dict with all body parts
+    galleries = {
+        "head": [],
+        "left_flank": [],
+        "right_flank": [],
+        "tail": [],
+        "misc": [],
+    }
+
+    # Find metadata path: database/{location}/{individual}/metadata.yaml
+    if location:
+        metadata_path = (
+            catalog_root / "database" / location / leopard_name / "metadata.yaml"
+        )
     else:
-        return gr.update(visible=False)
+        # Try to find the individual in any location
+        metadata_path = None
+        database_dir = catalog_root / "database"
+        if database_dir.exists():
+            for loc_dir in database_dir.iterdir():
+                if loc_dir.is_dir():
+                    potential_path = loc_dir / leopard_name / "metadata.yaml"
+                    if potential_path.exists():
+                        metadata_path = potential_path
+                        break
+
+    if not metadata_path or not metadata_path.exists():
+        logger.warning(f"Metadata not found for {leopard_name}")
+        return galleries
+
+    try:
+        metadata = load_leopard_metadata(metadata_path)
+
+        # Load all images organized by body part
+        for img_entry in metadata["reference_images"]:
+            body_part = img_entry.get("body_part", "misc")
+
+            # Normalize body_part to match our keys
+            if body_part not in galleries:
+                body_part = "misc"  # Default to misc if unknown
+
+            # Load image
+            img_path = catalog_root / "database" / img_entry["path"]
+
+            try:
+                img = Image.open(img_path)
+                # Simple caption: just body part name
+                caption = body_part
+                galleries[body_part].append((img, caption))
+            except Exception as e:
+                logger.error(f"Error loading image {img_path}: {e}")
+
+    except Exception as e:
+        logger.error(f"Error loading metadata for {leopard_name}: {e}")
+
+    return galleries
 
 
 def cleanup_temp_files():
@@ -603,13 +809,11 @@ def create_app(config: AppConfig):
 
     # Create interface
     with gr.Blocks(title="Snow Leopard Identification", theme=gr.themes.Soft()) as app:
-        gr.HTML(f"""
+        gr.HTML("""
             <div style="text-align: center; margin-bottom: 20px;">
-                <h1 style="margin-bottom: 10px;">🐆 Snow Leopard Identification & Catalog</h1>
+                <h1 style="margin-bottom: 10px;">🐆 Snow Leopard Identification</h1>
                 <p style="font-size: 16px; color: #666;">
                     Computer vision system for identifying individual snow leopards.
-                    Catalog contains {catalog_index["statistics"]["total_individuals"]} individuals
-                    with {catalog_index["statistics"]["total_reference_images"]} reference images.
                 </p>
             </div>
         """)
@@ -651,6 +855,30 @@ The system will detect the leopard, extract distinctive features, and match agai
                             info=f"Select extractor (available in catalog: {', '.join(available_extractors)})",
                         )
 
+                        # Location filter dropdown
+                        available_locations = get_available_locations(
+                            config.catalog_root
+                        )
+                        location_filter = gr.Dropdown(
+                            choices=available_locations,
+                            value=["all"],
+                            multiselect=True,
+                            label="Filter by Location",
+                            info="Select locations to search (default: all locations)",
+                        )
+
+                        # Body part filter dropdown
+                        available_body_parts = get_available_body_parts(
+                            config.catalog_root
+                        )
+                        body_part_filter = gr.Dropdown(
+                            choices=available_body_parts,
+                            value=["all"],
+                            multiselect=True,
+                            label="Filter by Body Part",
+                            info="Select body parts to match (default: all body parts)",
+                        )
+
                         submit_btn = gr.Button(
                             value="🔍 Identify Snow Leopard",
                             variant="primary",
@@ -685,7 +913,7 @@ View the internal processing steps: segmentation mask, cropped leopard, and extr
 
                             with gr.Tab("Top Matches"):
                                 gr.Markdown("""
-Click a row to view detailed feature matching visualization for that catalog image.
+Click a row to view detailed feature matching visualization and all reference images for that leopard.
 **Higher Wasserstein distance = better match** (typical range: 0.1-0.3)
                                 """)
 
@@ -707,17 +935,76 @@ Click a row to view detailed feature matching visualization for that catalog ima
                                 )
 
                                 selected_match_viz = gr.Image(
-                                    label="Selected Match Visualization",
+                                    label="Selected Match Visualization (Feature Keypoints)",
                                     type="pil",
                                     visible=False,
                                 )
 
+                                # Dynamic header showing matched leopard name
+                                selected_match_header = gr.Markdown("", visible=True)
+
+                                # Create tabs for each body part
+                                with gr.Tabs():
+                                    with gr.Tab("🗣️ Head"):
+                                        head_indicator = gr.Markdown("")
+                                        gallery_head = gr.Gallery(
+                                            columns=6,
+                                            height=400,
+                                            object_fit="scale-down",
+                                            allow_preview=True,
+                                        )
+
+                                    with gr.Tab("⬅️ Left Flank"):
+                                        left_flank_indicator = gr.Markdown("")
+                                        gallery_left_flank = gr.Gallery(
+                                            columns=6,
+                                            height=400,
+                                            object_fit="scale-down",
+                                            allow_preview=True,
+                                        )
+
+                                    with gr.Tab("➡️ Right Flank"):
+                                        right_flank_indicator = gr.Markdown("")
+                                        gallery_right_flank = gr.Gallery(
+                                            columns=6,
+                                            height=400,
+                                            object_fit="scale-down",
+                                            allow_preview=True,
+                                        )
+
+                                    with gr.Tab("🪶 Tail"):
+                                        tail_indicator = gr.Markdown("")
+                                        gallery_tail = gr.Gallery(
+                                            columns=6,
+                                            height=400,
+                                            object_fit="scale-down",
+                                            allow_preview=True,
+                                        )
+
+                                    with gr.Tab("📋 Other"):
+                                        misc_indicator = gr.Markdown("")
+                                        gallery_misc = gr.Gallery(
+                                            columns=6,
+                                            height=400,
+                                            object_fit="scale-down",
+                                            allow_preview=True,
+                                        )
+
                 # Connect submit button
                 submit_btn.click(
-                    fn=lambda img, ext: run_identification(
-                        image=img, extractor=ext, config=config
+                    fn=lambda img, ext, locs, parts: run_identification(
+                        image=img,
+                        extractor=ext,
+                        selected_locations=locs,
+                        selected_body_parts=parts,
+                        config=config,
                     ),
-                    inputs=[image_input, extractor_dropdown],
+                    inputs=[
+                        image_input,
+                        extractor_dropdown,
+                        location_filter,
+                        body_part_filter,
+                    ],
                     outputs=[
                         result_text,
                         seg_viz,
@@ -731,7 +1018,20 @@ Click a row to view detailed feature matching visualization for that catalog ima
                 # Connect dataset selection
                 matches_dataset.select(
                     fn=on_match_selected,
-                    outputs=[selected_match_viz],
+                    outputs=[
+                        selected_match_viz,
+                        selected_match_header,
+                        head_indicator,
+                        left_flank_indicator,
+                        right_flank_indicator,
+                        tail_indicator,
+                        misc_indicator,
+                        gallery_head,
+                        gallery_left_flank,
+                        gallery_right_flank,
+                        gallery_tail,
+                        gallery_misc,
+                    ],
                 )
 
             # Tab 2: Explore Catalog

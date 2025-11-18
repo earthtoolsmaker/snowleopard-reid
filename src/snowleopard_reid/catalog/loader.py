@@ -162,6 +162,159 @@ def get_all_catalog_features(
     return catalog_features
 
 
+def get_filtered_catalog_features(
+    catalog_root: Path,
+    extractor: str = "sift",
+    locations: list[str] | None = None,
+    body_parts: list[str] | None = None,
+) -> dict[str, dict[str, torch.Tensor]]:
+    """Load filtered catalog features for a specific extractor.
+
+    Args:
+        catalog_root: Path to catalog root directory (e.g., data/08_catalog/v1.0/)
+        extractor: Feature extractor name (default: 'sift')
+        locations: List of locations to filter by (e.g., ["naryn", "sarychat"]).
+                   If None, includes all locations.
+        body_parts: List of body parts to filter by (e.g., ["head", "right_flank"]).
+                    If None, includes all body parts.
+
+    Returns:
+        Dictionary mapping catalog_id to feature dict:
+            {
+                "leopard1_2022_001": {
+                    "keypoints": torch.Tensor,
+                    "descriptors": torch.Tensor,
+                    "scores": torch.Tensor,
+                    ...
+                },
+                ...
+            }
+
+    Raises:
+        FileNotFoundError: If catalog doesn't exist
+        ValueError: If no features found for extractor or filters
+    """
+    if not catalog_root.exists():
+        raise FileNotFoundError(f"Catalog root not found: {catalog_root}")
+
+    # Load catalog index to get all individuals
+    index = load_catalog_index(catalog_root)
+
+    # Check if extractor is available
+    available_extractors = index.get("feature_extractors", {})
+    if extractor not in available_extractors:
+        raise ValueError(
+            f"Extractor '{extractor}' not available in catalog. "
+            f"Available: {list(available_extractors.keys())}"
+        )
+
+    catalog_features = {}
+    database_dir = catalog_root / "database"
+
+    # Load features for each individual
+    for individual in index["individuals"]:
+        # Support both 'leopard_name' and 'individual_name' keys
+        leopard_name = individual.get("leopard_name") or individual.get(
+            "individual_name"
+        )
+        location = individual.get("location", "")
+
+        # Filter by location if specified
+        if locations is not None and location not in locations:
+            continue
+
+        # Construct path: database/{location}/{individual_name}/
+        if location:
+            leopard_dir = database_dir / location / leopard_name
+        else:
+            leopard_dir = database_dir / leopard_name
+
+        # Load leopard metadata to get all reference images
+        metadata_path = leopard_dir / "metadata.yaml"
+        metadata = load_leopard_metadata(metadata_path)
+
+        # Load features for each reference image
+        for ref_image in metadata["reference_images"]:
+            # Filter by body part if specified
+            if body_parts is not None:
+                ref_body_part = ref_image.get("body_part", "")
+                if ref_body_part not in body_parts:
+                    continue
+
+            # Check if features exist for this extractor
+            if extractor not in ref_image.get("features", {}):
+                continue
+
+            # Get feature path (relative to database directory in metadata)
+            feature_rel_path = ref_image["features"][extractor]
+            feature_path = database_dir / feature_rel_path
+
+            if not feature_path.exists():
+                # Skip missing features with a warning
+                continue
+
+            # Create catalog ID: leopard_name_year_imagenum
+            # e.g., "naguima_2022_001"
+            image_id = ref_image["image_id"]
+            catalog_id = f"{leopard_name.lower().replace(' ', '_')}_{image_id}"
+
+            # Load features
+            try:
+                feats = torch.load(feature_path, map_location="cpu", weights_only=False)
+                catalog_features[catalog_id] = feats
+            except Exception:
+                # Skip files that can't be loaded
+                continue
+
+    if not catalog_features:
+        filter_info = []
+        if locations:
+            filter_info.append(f"locations={locations}")
+        if body_parts:
+            filter_info.append(f"body_parts={body_parts}")
+        filter_str = ", ".join(filter_info) if filter_info else "no filters"
+        raise ValueError(
+            f"No features found for extractor '{extractor}' with {filter_str}"
+        )
+
+    return catalog_features
+
+
+def get_available_locations(catalog_root: Path) -> list[str]:
+    """Get list of available locations from catalog.
+
+    Args:
+        catalog_root: Path to catalog root directory
+
+    Returns:
+        List of location names prepended with "all" (e.g., ["all", "naryn", "sarychat"])
+    """
+    try:
+        index = load_catalog_index(catalog_root)
+        locations = index.get("statistics", {}).get("locations", [])
+        return ["all"] + sorted(locations)
+    except Exception:
+        return ["all"]
+
+
+def get_available_body_parts(catalog_root: Path) -> list[str]:
+    """Get list of available body parts from catalog.
+
+    Args:
+        catalog_root: Path to catalog root directory
+
+    Returns:
+        List of body part names prepended with "all"
+        (e.g., ["all", "head", "left_flank", "right_flank", "tail", "misc"])
+    """
+    try:
+        index = load_catalog_index(catalog_root)
+        body_parts = index.get("statistics", {}).get("body_parts", [])
+        return ["all"] + sorted(body_parts)
+    except Exception:
+        return ["all"]
+
+
 def get_catalog_metadata_for_id(
     catalog_root: Path,
     catalog_id: str,
