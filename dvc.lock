@@ -129,3 +129,67 @@ stages:
       md5: f506e8b9d97e889c551e494dfa0b7442.dir
       size: 631347266
       nfiles: 2724
+  split_yolo_dataset:
+    cmd: uv run python scripts/data/split_yolo_dataset.py --input-curated-json 
+      ./data/02_processed/fiftyone/yolo/segmentation/fiftyone_curated_selection.json
+      --output-dir ./data/03_model_input/yolo/segmentation --random-seed 42 
+      --train-ratio 0.8 --val-ratio 0.1 --test-ratio 0.1
+    deps:
+    - path: 
+        ./data/02_processed/fiftyone/yolo/segmentation/fiftyone_curated_selection.json
+      hash: md5
+      md5: 73f49a0c042bf62bd08ae764c3ac3d75
+      size: 108415
+    - path: ./scripts/data/split_yolo_dataset.py
+      hash: md5
+      md5: 608950311ea41579710607d55232f64c
+      size: 17929
+    outs:
+    - path: ./data/03_model_input/yolo/segmentation
+      hash: md5
+      md5: 47e1e795826544a973d7123440a20f10.dir
+      size: 75410083
+      nfiles: 464
+  train_yolo_segmentation_baseline:
+    cmd: uv run python scripts/models/train_yolo_segmentation.py --data-yaml 
+      ./data/03_model_input/yolo/segmentation/data.yaml --output-dir 
+      ./data/04_models/yolo/segmentation/baseline --model yolo11n-seg --epochs 
+      10 --batch-size 32 --imgsz 640
+    deps:
+    - path: ./data/03_model_input/yolo/segmentation
+      hash: md5
+      md5: 0f2c503a1abb2ca993e41d927cfe23af.dir
+      size: 77618832
+      nfiles: 466
+    - path: ./scripts/models/train_yolo_segmentation.py
+      hash: md5
+      md5: 12e391f2786992715cb7f4455097dbc4
+      size: 10786
+    outs:
+    - path: ./data/04_models/yolo/segmentation/baseline
+      hash: md5
+      md5: a6df538710cba20d7097ded4a8ff47f4.dir
+      size: 16243647
+      nfiles: 23
+  train_yolo_segmentation_best:
+    cmd: uv run python scripts/models/train_yolo_segmentation.py --data-yaml 
+      ./data/03_model_input/yolo/segmentation/data.yaml --output-dir 
+      ./data/04_models/yolo/segmentation/best --model yolo11n-seg --epochs 30 
+      --batch-size 16 --imgsz 1280 --fliplr 0.5 --scale 0.7 --translate 0.2 
+      --lr0 0.02 --lrf 0.01 --warmup-epochs 5 --patience 50
+    deps:
+    - path: ./data/03_model_input/yolo/segmentation
+      hash: md5
+      md5: 0f2c503a1abb2ca993e41d927cfe23af.dir
+      size: 77618832
+      nfiles: 466
+    - path: ./scripts/models/train_yolo_segmentation.py
+      hash: md5
+      md5: 52333d001efba74a28d96e8af14bb461
+      size: 12350
+    outs:
+    - path: ./data/04_models/yolo/segmentation/best
+      hash: md5
+      md5: d1e32f521a72cbaa2b467e5b817aa430.dir
+      size: 19780038
+      nfiles: 28

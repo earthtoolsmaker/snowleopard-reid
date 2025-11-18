@@ -75,3 +75,58 @@ stages:
     outs:
       - ./data/02_processed/yolo/segmentation
     desc: "Convert SAM HQ binary masks to YOLO polygon format for segmentation dataset preparation"
+
+  split_yolo_dataset:
+    cmd: >-
+      uv run python scripts/data/split_yolo_dataset.py
+      --input-curated-json ./data/02_processed/fiftyone/yolo/segmentation/fiftyone_curated_selection.json
+      --output-dir ./data/03_model_input/yolo/segmentation
+      --random-seed 42
+      --train-ratio 0.8
+      --val-ratio 0.1
+      --test-ratio 0.1
+    deps:
+      - ./data/02_processed/fiftyone/yolo/segmentation/fiftyone_curated_selection.json
+      - ./scripts/data/split_yolo_dataset.py
+    outs:
+      - ./data/03_model_input/yolo/segmentation
+    desc: "Split curated YOLO dataset into train/val/test with temporal anti-leakage"
+
+  train_yolo_segmentation_baseline:
+    cmd: >-
+      uv run python scripts/models/train_yolo_segmentation.py
+      --data-yaml ./data/03_model_input/yolo/segmentation/data.yaml
+      --output-dir ./data/04_models/yolo/segmentation/baseline
+      --model yolo11n-seg
+      --epochs 10
+      --batch-size 32
+      --imgsz 640
+    deps:
+      - ./data/03_model_input/yolo/segmentation
+      - ./scripts/models/train_yolo_segmentation.py
+    outs:
+      - ./data/04_models/yolo/segmentation/baseline
+    desc: "Train baseline YOLO11n segmentation model (fast, 10 epochs, 640px)"
+
+  train_yolo_segmentation_best:
+    cmd: >-
+      uv run python scripts/models/train_yolo_segmentation.py
+      --data-yaml ./data/03_model_input/yolo/segmentation/data.yaml
+      --output-dir ./data/04_models/yolo/segmentation/best
+      --model yolo11n-seg
+      --epochs 30
+      --batch-size 16
+      --imgsz 1280
+      --fliplr 0.5
+      --scale 0.7
+      --translate 0.2
+      --lr0 0.02
+      --lrf 0.01
+      --warmup-epochs 5
+      --patience 50
+    deps:
+      - ./data/03_model_input/yolo/segmentation
+      - ./scripts/models/train_yolo_segmentation.py
+    outs:
+      - ./data/04_models/yolo/segmentation/best
+    desc: "Train optimized YOLO11n segmentation model (30 epochs, 1280px, lr0=0.02 for faster convergence)"
