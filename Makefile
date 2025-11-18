@@ -1,4 +1,4 @@
-.PHONY: help install lint format check
+.PHONY: help install lint format check fiftyone-load fiftyone-export
 
 .DEFAULT_GOAL := help
 
@@ -18,3 +18,9 @@ format: ## Run ruff formatter
 check: ## Run ruff check and format in check mode (no changes)
 	uv run ruff check .
 	uv run ruff format --check .
+
+fiftyone-load: ## Load YOLO dataset into FiftyOne and launch app for review
+	uv run python scripts/data/load_yolo_to_fiftyone.py --overwrite --launch
+
+fiftyone-export: ## Export samples tagged with 'selected' from FiftyOne to JSON
+	uv run python scripts/data/export_fiftyone_selection.py --selection-mode selected

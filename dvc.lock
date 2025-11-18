@@ -109,3 +109,23 @@ stages:
       md5: d4444cdb7522271639b33213f4e1537a.dir
       size: 235758260
       nfiles: 934
+  yolo_prepare_dataset:
+    cmd: uv run python scripts/data/sam_to_yolo.py --sam-output-dir 
+      ./data/05_model_output/sam_hq --yolo-output-dir 
+      ./data/02_processed/yolo/segmentation --min-area 200 --max-size 1024
+    deps:
+    - path: ./data/05_model_output/sam_hq
+      hash: md5
+      md5: 0733a9d015aaa6f5e717969df6e874c4.dir
+      size: 320102750
+      nfiles: 2753
+    - path: ./scripts/data/sam_to_yolo.py
+      hash: md5
+      md5: 58d5a05f26bfcd2955da23626c97677f
+      size: 19874
+    outs:
+    - path: ./data/02_processed/yolo/segmentation
+      hash: md5
+      md5: f506e8b9d97e889c551e494dfa0b7442.dir
+      size: 631347266
+      nfiles: 2724

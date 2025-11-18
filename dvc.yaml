@@ -61,3 +61,17 @@ stages:
     outs:
       - data/02_processed/cropped/leopards
     desc: "Crop individual snow leopards from images using SAM HQ masks with black background for downstream processing"
+
+  yolo_prepare_dataset:
+    cmd: >-
+      uv run python scripts/data/sam_to_yolo.py
+      --sam-output-dir ./data/05_model_output/sam_hq
+      --yolo-output-dir ./data/02_processed/yolo/segmentation
+      --min-area 200
+      --max-size 1024
+    deps:
+      - ./data/05_model_output/sam_hq
+      - ./scripts/data/sam_to_yolo.py
+    outs:
+      - ./data/02_processed/yolo/segmentation
+    desc: "Convert SAM HQ binary masks to YOLO polygon format for segmentation dataset preparation"
