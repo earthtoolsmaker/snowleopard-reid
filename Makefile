@@ -1,4 +1,4 @@
-.PHONY: help install lint format check fiftyone-load fiftyone-export
+.PHONY: help install lint format check fiftyone-load fiftyone-export catalog-viewer
 
 .DEFAULT_GOAL := help
 
@@ -24,3 +24,6 @@ fiftyone-load: ## Load YOLO dataset into FiftyOne and launch app for review
 
 fiftyone-export: ## Export samples tagged with 'selected' from FiftyOne to JSON
 	uv run python scripts/data/export_fiftyone_selection.py --selection-mode selected
+
+catalog-viewer: ## Launch the snow leopard catalog viewer UI
+	uv run python scripts/ui/leopard_catalog_viewer.py --catalog-root data/08_catalog/v1.0 --port 7860
