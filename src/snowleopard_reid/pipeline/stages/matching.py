@@ -17,6 +17,7 @@ from snowleopard_reid import get_device
 from snowleopard_reid.catalog import (
     get_all_catalog_features,
     get_catalog_metadata_for_id,
+    get_filtered_catalog_features,
     load_catalog_index,
 )
 
@@ -31,6 +32,8 @@ def run_matching_stage(
     device: str | None = None,
     query_image_path: str | None = None,
     pairwise_output_dir: Path | None = None,
+    filter_locations: list[str] | None = None,
+    filter_body_parts: list[str] | None = None,
 ) -> dict:
     """Match query against catalog.
 
@@ -45,6 +48,8 @@ def run_matching_stage(
         device: Device to run matching on ('cpu', 'cuda', or None for auto-detect)
         query_image_path: Path to query image (optional, for pairwise data)
         pairwise_output_dir: Directory to save pairwise match data (optional)
+        filter_locations: List of locations to filter catalog by (e.g., ["naryn"])
+        filter_body_parts: List of body parts to filter catalog by (e.g., ["head", "right_flank"])
 
     Returns:
         Stage dict with structure:
@@ -82,15 +87,33 @@ def run_matching_stage(
         f"{catalog_index['statistics']['total_reference_images']} images"
     )
 
-    # Load all catalog features
-    logger.info(f"Loading catalog features (extractor: {extractor})")
-    try:
-        catalog_features = get_all_catalog_features(
-            catalog_root=catalog_path, extractor=extractor
-        )
-        logger.info(f"Loaded {len(catalog_features)} catalog features")
-    except ValueError as e:
-        raise ValueError(f"Failed to load catalog features: {e}")
+    # Load catalog features (with optional filtering)
+    if filter_locations or filter_body_parts:
+        filter_info = []
+        if filter_locations:
+            filter_info.append(f"locations={filter_locations}")
+        if filter_body_parts:
+            filter_info.append(f"body_parts={filter_body_parts}")
+        logger.info(f"Loading filtered catalog features ({', '.join(filter_info)})")
+        try:
+            catalog_features = get_filtered_catalog_features(
+                catalog_root=catalog_path,
+                extractor=extractor,
+                locations=filter_locations,
+                body_parts=filter_body_parts,
+            )
+            logger.info(f"Loaded {len(catalog_features)} filtered catalog features")
+        except ValueError as e:
+            raise ValueError(f"Failed to load filtered catalog features: {e}")
+    else:
+        logger.info(f"Loading catalog features (extractor: {extractor})")
+        try:
+            catalog_features = get_all_catalog_features(
+                catalog_root=catalog_path, extractor=extractor
+            )
+            logger.info(f"Loaded {len(catalog_features)} catalog features")
+        except ValueError as e:
+            raise ValueError(f"Failed to load catalog features: {e}")
 
     # Initialize LightGlue matcher
     logger.info(f"Initializing LightGlue matcher with {extractor} features")
@@ -296,6 +319,8 @@ def run_matching_stage(
             "extractor": extractor,
             "device": device,
             "catalog_path": str(catalog_path),
+            "filter_locations": filter_locations,
+            "filter_body_parts": filter_body_parts,
         },
         "metrics": {
             "num_catalog_images": len(catalog_features),

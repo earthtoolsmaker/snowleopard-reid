@@ -45,7 +45,12 @@ import torch
 import yaml
 from PIL import Image
 
-from snowleopard_reid.catalog import get_catalog_metadata_for_id, load_catalog_index
+from snowleopard_reid.catalog import (
+    get_available_body_parts,
+    get_available_locations,
+    get_catalog_metadata_for_id,
+    load_catalog_index,
+)
 from snowleopard_reid.pipeline.stages import (
     run_feature_extraction_stage,
     run_matching_stage,
@@ -220,12 +225,20 @@ def initialize_models(config: AppConfig):
     logger.info("Models initialized successfully")
 
 
-def run_identification(image, extractor: str, config: AppConfig):
+def run_identification(
+    image,
+    extractor: str,
+    selected_locations: list[str],
+    selected_body_parts: list[str],
+    config: AppConfig,
+):
     """Run snow leopard identification pipeline on uploaded image.
 
     Args:
         image: PIL Image from Gradio upload
         extractor: Feature extractor to use ('sift', 'superpoint', 'disk', 'aliked')
+        selected_locations: List of selected locations (includes "all" for no filtering)
+        selected_body_parts: List of selected body parts (includes "all" for no filtering)
         config: Application configuration
 
     Returns:
@@ -240,6 +253,29 @@ def run_identification(image, extractor: str, config: AppConfig):
             [],
             gr.update(visible=False),
         )
+
+    # Convert filter selections to None if "all" is selected
+    filter_locations = (
+        None
+        if not selected_locations or "all" in selected_locations
+        else selected_locations
+    )
+    filter_body_parts = (
+        None
+        if not selected_body_parts or "all" in selected_body_parts
+        else selected_body_parts
+    )
+
+    # Log applied filters
+    if filter_locations or filter_body_parts:
+        filter_desc = []
+        if filter_locations:
+            filter_desc.append(f"locations: {', '.join(filter_locations)}")
+        if filter_body_parts:
+            filter_desc.append(f"body parts: {', '.join(filter_body_parts)}")
+        logger.info(f"Applied filters - {' | '.join(filter_desc)}")
+    else:
+        logger.info("No filters applied - matching against entire catalog")
 
     try:
         # Create temporary directory for this query
@@ -331,6 +367,8 @@ def run_identification(image, extractor: str, config: AppConfig):
             device=device,
             query_image_path=str(cropped_path),
             pairwise_output_dir=pairwise_dir,
+            filter_locations=filter_locations,
+            filter_body_parts=filter_body_parts,
         )
 
         matches = match_stage["data"]["matches"]
@@ -603,13 +641,11 @@ def create_app(config: AppConfig):
 
     # Create interface
     with gr.Blocks(title="Snow Leopard Identification", theme=gr.themes.Soft()) as app:
-        gr.HTML(f"""
+        gr.HTML("""
             <div style="text-align: center; margin-bottom: 20px;">
-                <h1 style="margin-bottom: 10px;">🐆 Snow Leopard Identification & Catalog</h1>
+                <h1 style="margin-bottom: 10px;">🐆 Snow Leopard Identification</h1>
                 <p style="font-size: 16px; color: #666;">
                     Computer vision system for identifying individual snow leopards.
-                    Catalog contains {catalog_index["statistics"]["total_individuals"]} individuals
-                    with {catalog_index["statistics"]["total_reference_images"]} reference images.
                 </p>
             </div>
         """)
@@ -649,6 +685,30 @@ The system will detect the leopard, extract distinctive features, and match agai
                             else "sift",
                             label="Feature Extractor",
                             info=f"Select extractor (available in catalog: {', '.join(available_extractors)})",
+                        )
+
+                        # Location filter dropdown
+                        available_locations = get_available_locations(
+                            config.catalog_root
+                        )
+                        location_filter = gr.Dropdown(
+                            choices=available_locations,
+                            value=["all"],
+                            multiselect=True,
+                            label="Filter by Location",
+                            info="Select locations to search (default: all locations)",
+                        )
+
+                        # Body part filter dropdown
+                        available_body_parts = get_available_body_parts(
+                            config.catalog_root
+                        )
+                        body_part_filter = gr.Dropdown(
+                            choices=available_body_parts,
+                            value=["all"],
+                            multiselect=True,
+                            label="Filter by Body Part",
+                            info="Select body parts to match (default: all body parts)",
                         )
 
                         submit_btn = gr.Button(
@@ -714,10 +774,19 @@ Click a row to view detailed feature matching visualization for that catalog ima
 
                 # Connect submit button
                 submit_btn.click(
-                    fn=lambda img, ext: run_identification(
-                        image=img, extractor=ext, config=config
+                    fn=lambda img, ext, locs, parts: run_identification(
+                        image=img,
+                        extractor=ext,
+                        selected_locations=locs,
+                        selected_body_parts=parts,
+                        config=config,
                     ),
-                    inputs=[image_input, extractor_dropdown],
+                    inputs=[
+                        image_input,
+                        extractor_dropdown,
+                        location_filter,
+                        body_part_filter,
+                    ],
                     outputs=[
                         result_text,
                         seg_viz,
