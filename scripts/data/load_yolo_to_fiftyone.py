@@ -72,7 +72,9 @@ def parse_yolo_segmentation(label_path: Path) -> list[list[tuple[float, float]]]
     return polygons
 
 
-def get_sam_metadata(image_path: Path, sam_predictions_dir: Path, images_root: Path) -> dict:
+def get_sam_metadata(
+    image_path: Path, sam_predictions_dir: Path, images_root: Path
+) -> dict:
     """
     Extract SAM HQ and Grounding DINO scores from prediction JSON.
 
@@ -91,7 +93,9 @@ def get_sam_metadata(image_path: Path, sam_predictions_dir: Path, images_root: P
     body_part = relative_parts[2]
     image_stem = image_path.stem
 
-    sam_json_path = sam_predictions_dir / location / individual / body_part / f"{image_stem}.json"
+    sam_json_path = (
+        sam_predictions_dir / location / individual / body_part / f"{image_stem}.json"
+    )
 
     if not sam_json_path.exists():
         return {}
@@ -181,7 +185,7 @@ def create_fiftyone_dataset(
         sam_metadata = get_sam_metadata(
             image_path=image_path,
             sam_predictions_dir=sam_predictions_dir,
-            images_root=images_dir
+            images_root=images_dir,
         )
 
         # Create FiftyOne sample
