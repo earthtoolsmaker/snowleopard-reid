@@ -24,9 +24,10 @@ import argparse
 import logging
 from pathlib import Path
 
-import cv2
-import numpy as np
 import torch
+
+from snowleopard_reid import get_device
+from snowleopard_reid.features import extract_sift_features
 
 
 def setup_logging(verbose: bool) -> None:
@@ -36,65 +37,6 @@ def setup_logging(verbose: bool) -> None:
         level=level,
         format="%(levelname)s: %(message)s",
     )
-
-
-def extract_sift_features(
-    image_path: Path,
-    max_num_keypoints: int = 2048,
-) -> dict:
-    """Extract SIFT features from an image.
-
-    Args:
-        image_path: Path to input image
-        max_num_keypoints: Maximum number of keypoints to extract
-
-    Returns:
-        Dictionary containing keypoints, descriptors, scores, and image_size as PyTorch tensors
-    """
-    # Load image
-    img = cv2.imread(str(image_path))
-    if img is None:
-        raise ValueError(f"Could not load image: {image_path}")
-
-    # Convert to grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # Initialize SIFT detector
-    sift = cv2.SIFT_create(nfeatures=max_num_keypoints)
-
-    # Detect and compute keypoints and descriptors
-    keypoints, descriptors = sift.detectAndCompute(gray, None)
-
-    if descriptors is None or len(keypoints) == 0:
-        # Return empty features if no keypoints found
-        return {
-            "keypoints": torch.empty((0, 2), dtype=torch.float32),
-            "descriptors": torch.empty((0, 128), dtype=torch.float32),
-            "scores": torch.empty((0,), dtype=torch.float32),
-            "image_size": torch.tensor([img.shape[1], img.shape[0]], dtype=torch.int32),
-        }
-
-    # Convert keypoints to numpy arrays
-    kpts = np.array([kp.pt for kp in keypoints], dtype=np.float32)  # (x, y) coordinates
-    scores = np.array([kp.response for kp in keypoints], dtype=np.float32)
-
-    # Limit to max_num_keypoints (already done by SIFT_create but be safe)
-    if len(kpts) > max_num_keypoints:
-        # Sort by response score and take top-k
-        idx = np.argsort(scores)[::-1][:max_num_keypoints]
-        kpts = kpts[idx]
-        descriptors = descriptors[idx]
-        scores = scores[idx]
-
-    # Convert to PyTorch tensors
-    features = {
-        "keypoints": torch.from_numpy(kpts),  # Shape: [N, 2]
-        "descriptors": torch.from_numpy(descriptors),  # Shape: [N, 128]
-        "scores": torch.from_numpy(scores),  # Shape: [N]
-        "image_size": torch.tensor([img.shape[1], img.shape[0]], dtype=torch.int32),
-    }
-
-    return features
 
 
 def extract_catalog_features(
@@ -126,6 +68,9 @@ def extract_catalog_features(
 
     if not catalog_dir.exists():
         raise FileNotFoundError(f"Catalog directory not found: {catalog_dir}")
+
+    # Auto-detect device (GPU if available)
+    device = get_device(device=None, verbose=True)
 
     logging.info(
         f"Initializing SIFT feature extractor (max_keypoints: {max_num_keypoints})"
@@ -178,6 +123,7 @@ def extract_catalog_features(
                     feats = extract_sift_features(
                         image_path=image_path,
                         max_num_keypoints=max_num_keypoints,
+                        device=device,
                     )
 
                     # Save features
