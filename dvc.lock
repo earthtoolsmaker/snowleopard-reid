@@ -109,3 +109,43 @@ stages:
       md5: d4444cdb7522271639b33213f4e1537a.dir
       size: 235758260
       nfiles: 934
+  build_catalog:
+    cmd: uv run python scripts/catalog/build_catalog_from_selection.py 
+      --selection-file data/08_catalog/v1.0/selection.yaml --catalog-dir 
+      data/08_catalog/v1.0/database && uv run python 
+      scripts/catalog/extract_catalog_features.py --catalog-dir 
+      data/08_catalog/v1.0/database --extractor sift --max-keypoints 2048 && uv 
+      run python scripts/catalog/generate_catalog_metadata.py --catalog-dir 
+      data/08_catalog/v1.0 --catalog-version 1.0.0
+    deps:
+    - path: data/02_processed/cropped/leopards
+      hash: md5
+      md5: d4444cdb7522271639b33213f4e1537a.dir
+      size: 235758260
+      nfiles: 934
+    - path: data/08_catalog/v1.0/selection.yaml
+      hash: md5
+      md5: e6b92e5f9dbf6cf4e505d514a0b3a402
+      size: 7074
+    - path: scripts/catalog/build_catalog_from_selection.py
+      hash: md5
+      md5: 3140fd52f649f70a65c9d28325f22cab
+      size: 4204
+    - path: scripts/catalog/extract_catalog_features.py
+      hash: md5
+      md5: 840e9d9ae08c2f27a7ad5ec93b934a7b
+      size: 8149
+    - path: scripts/catalog/generate_catalog_metadata.py
+      hash: md5
+      md5: 61e5b57a2d299834163334f34e3e6597
+      size: 13961
+    outs:
+    - path: data/08_catalog/v1.0/catalog_index.yaml
+      hash: md5
+      md5: 0dda9f61e13188539e6db2bb15f7b2c5
+      size: 1541
+    - path: data/08_catalog/v1.0/database
+      hash: md5
+      md5: a88729c4c4783bea1fb8b3e52916d33d.dir
+      size: 93461689
+      nfiles: 149
