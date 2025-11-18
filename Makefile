@@ -1,4 +1,4 @@
-.PHONY: help install lint format check fiftyone-load fiftyone-export catalog-viewer
+.PHONY: help install lint format check fiftyone-load fiftyone-export catalog-viewer ui
 
 .DEFAULT_GOAL := help
 
@@ -27,3 +27,6 @@ fiftyone-export: ## Export samples tagged with 'selected' from FiftyOne to JSON
 
 catalog-viewer: ## Launch the snow leopard catalog viewer UI
 	uv run python scripts/ui/leopard_catalog_viewer.py --catalog-root data/08_catalog/v1.0 --port 7860
+
+ui: ## Launch the full snow leopard re-identification UI (identification + catalog)
+	uv run python scripts/ui/snowleopard_reid_ui.py --catalog-root data/08_catalog/v1.0 --model-path data/04_models/yolo/segmentation/best/weights/best.pt --port 7860
