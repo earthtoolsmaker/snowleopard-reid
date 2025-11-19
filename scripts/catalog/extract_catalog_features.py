@@ -1,23 +1,36 @@
-"""Extract SIFT features from catalog images for snow leopard identification.
+"""Extract features from catalog images for snow leopard identification.
 
-This script processes all images in a catalog database to extract SIFT keypoint features
+This script processes all images in a catalog database to extract keypoint features
 that will be used for matching query leopards against the reference catalog.
+
+Supported extractors:
+- SIFT: Classical handcrafted features (128-dim, CPU-friendly)
+- SuperPoint: Learned detector (256-dim, GPU-optimized)
+- DISK: Rotation-invariant learned features (128-dim)
+- ALIKED: Lightweight learned features (128-dim)
 
 This script:
 1. Scans catalog database for all individual directories
 2. Finds all images for each individual (organized by location/body_part)
-3. Extracts SIFT features (default: 2048 max keypoints)
+3. Extracts features using specified extractor (default: 2048 max keypoints)
 4. Saves features as .pt files in parallel directory structure
 5. Logs progress and statistics
 
 Usage:
     python scripts/catalog/extract_catalog_features.py --catalog-dir <path> [options]
 
-Example:
+Examples:
+    # Extract SIFT features (default)
     python scripts/catalog/extract_catalog_features.py \
         --catalog-dir ./data/08_catalog/v1.0/database \
         --extractor sift \
         --max-keypoints 2048
+
+    # Extract SuperPoint features on GPU
+    python scripts/catalog/extract_catalog_features.py \
+        --catalog-dir ./data/08_catalog/v1.0/database \
+        --extractor superpoint \
+        --max-keypoints 1024
 """
 
 import argparse
@@ -27,7 +40,7 @@ from pathlib import Path
 import torch
 
 from snowleopard_reid import get_device
-from snowleopard_reid.features import extract_sift_features
+from snowleopard_reid.features import extract_features
 
 
 def setup_logging(verbose: bool) -> None:
@@ -49,18 +62,13 @@ def extract_catalog_features(
 
     Args:
         catalog_dir: Path to catalog database directory
-        extractor_name: Feature extractor to use (currently only 'sift' supported)
+        extractor_name: Feature extractor to use ('sift', 'superpoint', 'disk', 'aliked')
         max_num_keypoints: Maximum number of keypoints to extract per image
         verbose: Enable verbose logging
     """
     setup_logging(verbose)
 
     # Validate parameters
-    if extractor_name.lower() != "sift":
-        raise ValueError(
-            f"Currently only 'sift' extractor is supported, got: {extractor_name}"
-        )
-
     if not (512 <= max_num_keypoints <= 4096):
         raise ValueError(
             f"max_num_keypoints must be in range 512-4096, got {max_num_keypoints}"
@@ -73,7 +81,7 @@ def extract_catalog_features(
     device = get_device(device=None, verbose=True)
 
     logging.info(
-        f"Initializing SIFT feature extractor (max_keypoints: {max_num_keypoints})"
+        f"Initializing {extractor_name.upper()} feature extractor (max_keypoints: {max_num_keypoints})"
     )
 
     # Find all location directories
@@ -120,7 +128,8 @@ def extract_catalog_features(
 
                 # Extract features
                 try:
-                    feats = extract_sift_features(
+                    feats = extract_features(
+                        extractor=extractor_name,
                         image_path=image_path,
                         max_num_keypoints=max_num_keypoints,
                         device=device,
@@ -152,7 +161,7 @@ def extract_catalog_features(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract SIFT features from catalog images"
+        description="Extract features from catalog images using various extractors"
     )
     parser.add_argument(
         "--catalog-dir",
@@ -164,7 +173,7 @@ def main():
         "--extractor",
         type=str,
         default="sift",
-        choices=["sift"],
+        choices=["sift", "superpoint", "disk", "aliked"],
         help="Feature extractor to use (default: sift)",
     )
     parser.add_argument(

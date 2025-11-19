@@ -131,17 +131,35 @@ stages:
       - ./data/04_models/yolo/segmentation/best
     desc: "Train optimized YOLO11n segmentation model (30 epochs, 1280px, lr0=0.02 for faster convergence)"
   build_catalog:
-    cmd: >-
-      uv run python scripts/catalog/build_catalog_from_selection.py
-      --selection-file data/08_catalog/v1.0/selection.yaml
-      --catalog-dir data/08_catalog/v1.0/database &&
-      uv run python scripts/catalog/extract_catalog_features.py
-      --catalog-dir data/08_catalog/v1.0/database
-      --extractor sift
-      --max-keypoints 2048 &&
-      uv run python scripts/catalog/generate_catalog_metadata.py
-      --catalog-dir data/08_catalog/v1.0
-      --catalog-version 1.0.0
+    cmd:
+      - >-
+        uv run python scripts/catalog/build_catalog_from_selection.py
+        --selection-file data/08_catalog/v1.0/selection.yaml
+        --catalog-dir data/08_catalog/v1.0/database
+      - >-
+        uv run python scripts/catalog/extract_catalog_features.py
+        --catalog-dir data/08_catalog/v1.0/database
+        --extractor sift
+        --max-keypoints 2048
+      - >-
+        uv run python scripts/catalog/extract_catalog_features.py
+        --catalog-dir data/08_catalog/v1.0/database
+        --extractor superpoint
+        --max-keypoints 2048
+      - >-
+        uv run python scripts/catalog/extract_catalog_features.py
+        --catalog-dir data/08_catalog/v1.0/database
+        --extractor disk
+        --max-keypoints 2048
+      - >-
+        uv run python scripts/catalog/extract_catalog_features.py
+        --catalog-dir data/08_catalog/v1.0/database
+        --extractor aliked
+        --max-keypoints 2048
+      - >-
+        uv run python scripts/catalog/generate_catalog_metadata.py
+        --catalog-dir data/08_catalog/v1.0
+        --catalog-version 1.0.0
     deps:
       - scripts/catalog/build_catalog_from_selection.py
       - scripts/catalog/extract_catalog_features.py
@@ -151,4 +169,5 @@ stages:
     outs:
       - data/08_catalog/v1.0/database
       - data/08_catalog/v1.0/catalog_index.yaml
-    desc: "Build leopard identification catalog from selection: copy images, extract SIFT features, generate metadata"
+    desc: "Build leopard identification catalog from selection: copy images, extract features (SIFT, SuperPoint, DISK, ALIKED), generate metadata"
+

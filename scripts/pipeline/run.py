@@ -690,7 +690,7 @@ Examples:
         "--extractor",
         type=str,
         default="sift",
-        choices=["sift"],
+        choices=["sift", "superpoint", "disk", "aliked"],
         help="Feature extractor (default: sift)",
     )
     parser.add_argument(
