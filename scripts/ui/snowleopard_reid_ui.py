@@ -545,7 +545,7 @@ def create_segmentation_viz(image_path, mask):
 def on_match_selected(evt: gr.SelectData):
     """Handle selection of a match from the dataset table.
 
-    Returns visualization, header, indicators, and galleries organized by body part.
+    Returns visualization, header, indicators, empty messages, and galleries organized by body part.
     """
     # evt.index is [row, col] for Dataframe, we want row
     if isinstance(evt.index, (list, tuple)):
@@ -569,7 +569,7 @@ def on_match_selected(evt: gr.SelectData):
             break
 
     if not selected_match or selected_rank not in match_visualizations:
-        # Return empty updates for all 12 outputs
+        # Return empty updates for all 17 outputs
         return (
             gr.update(visible=False),  # 1. visualization
             gr.update(value=""),  # 2. header
@@ -578,11 +578,16 @@ def on_match_selected(evt: gr.SelectData):
             gr.update(value=""),  # 5. right_flank indicator
             gr.update(value=""),  # 6. tail indicator
             gr.update(value=""),  # 7. misc indicator
-            gr.update(value=[]),  # 8. head gallery
-            gr.update(value=[]),  # 9. left_flank gallery
-            gr.update(value=[]),  # 10. right_flank gallery
-            gr.update(value=[]),  # 11. tail gallery
-            gr.update(value=[]),  # 12. misc gallery
+            gr.update(visible=False),  # 8. head empty message
+            gr.update(visible=False),  # 9. left_flank empty message
+            gr.update(visible=False),  # 10. right_flank empty message
+            gr.update(visible=False),  # 11. tail empty message
+            gr.update(visible=False),  # 12. misc empty message
+            gr.update(value=[]),  # 13. head gallery
+            gr.update(value=[]),  # 14. left_flank gallery
+            gr.update(value=[]),  # 15. right_flank gallery
+            gr.update(value=[]),  # 16. tail gallery
+            gr.update(value=[]),  # 17. misc gallery
         )
 
     # Get visualization
@@ -628,6 +633,11 @@ def on_match_selected(evt: gr.SelectData):
             return "⭐"
         return ""
 
+    # Helper to determine if empty message should be visible
+    def is_empty(body_part: str) -> bool:
+        """Return True if no images for this body part."""
+        return len(galleries.get(body_part, [])) == 0
+
     return (
         gr.update(value=match_viz, visible=True),  # 1. visualization
         gr.update(value=header_text),  # 2. header
@@ -636,11 +646,26 @@ def on_match_selected(evt: gr.SelectData):
         gr.update(value=get_indicator("right_flank")),  # 5. right_flank indicator
         gr.update(value=get_indicator("tail")),  # 6. tail indicator
         gr.update(value=get_indicator("misc")),  # 7. misc indicator
-        gr.update(value=galleries.get("head", [])),  # 8. head gallery
-        gr.update(value=galleries.get("left_flank", [])),  # 9. left_flank gallery
-        gr.update(value=galleries.get("right_flank", [])),  # 10. right_flank gallery
-        gr.update(value=galleries.get("tail", [])),  # 11. tail gallery
-        gr.update(value=galleries.get("misc", [])),  # 12. misc gallery
+        gr.update(visible=is_empty("head")),  # 8. head empty message
+        gr.update(visible=is_empty("left_flank")),  # 9. left_flank empty message
+        gr.update(visible=is_empty("right_flank")),  # 10. right_flank empty message
+        gr.update(visible=is_empty("tail")),  # 11. tail empty message
+        gr.update(visible=is_empty("misc")),  # 12. misc empty message
+        gr.update(
+            value=galleries.get("head", []), visible=not is_empty("head")
+        ),  # 13. head gallery
+        gr.update(
+            value=galleries.get("left_flank", []), visible=not is_empty("left_flank")
+        ),  # 14. left_flank gallery
+        gr.update(
+            value=galleries.get("right_flank", []), visible=not is_empty("right_flank")
+        ),  # 15. right_flank gallery
+        gr.update(
+            value=galleries.get("tail", []), visible=not is_empty("tail")
+        ),  # 16. tail gallery
+        gr.update(
+            value=galleries.get("misc", []), visible=not is_empty("misc")
+        ),  # 17. misc gallery
     )
 
 
@@ -902,14 +927,13 @@ View the internal processing steps: segmentation mask, cropped leopard, and extr
                                         type="pil",
                                     )
                                     cropped_image = gr.Image(
-                                        label="Extracted Snow Leopard (Cropped & Masked)",
+                                        label="Extracted Snow Leopard",
                                         type="pil",
                                     )
-
-                                extracted_kpts_viz = gr.Image(
-                                    label="Extracted Keypoints",
-                                    type="pil",
-                                )
+                                    extracted_kpts_viz = gr.Image(
+                                        label="Extracted Keypoints",
+                                        type="pil",
+                                    )
 
                             with gr.Tab("Top Matches"):
                                 gr.Markdown("""
@@ -947,6 +971,12 @@ Click a row to view detailed feature matching visualization and all reference im
                                 with gr.Tabs():
                                     with gr.Tab("🗣️ Head"):
                                         head_indicator = gr.Markdown("")
+                                        head_empty_message = gr.Markdown(
+                                            value='<div style="text-align: center; padding: 60px 20px; color: #888;">'
+                                            '<p style="font-size: 16px;">No reference images available for this body part</p>'
+                                            "</div>",
+                                            visible=False,
+                                        )
                                         gallery_head = gr.Gallery(
                                             columns=6,
                                             height=400,
@@ -956,6 +986,12 @@ Click a row to view detailed feature matching visualization and all reference im
 
                                     with gr.Tab("⬅️ Left Flank"):
                                         left_flank_indicator = gr.Markdown("")
+                                        left_flank_empty_message = gr.Markdown(
+                                            value='<div style="text-align: center; padding: 60px 20px; color: #888;">'
+                                            '<p style="font-size: 16px;">No reference images available for this body part</p>'
+                                            "</div>",
+                                            visible=False,
+                                        )
                                         gallery_left_flank = gr.Gallery(
                                             columns=6,
                                             height=400,
@@ -965,6 +1001,12 @@ Click a row to view detailed feature matching visualization and all reference im
 
                                     with gr.Tab("➡️ Right Flank"):
                                         right_flank_indicator = gr.Markdown("")
+                                        right_flank_empty_message = gr.Markdown(
+                                            value='<div style="text-align: center; padding: 60px 20px; color: #888;">'
+                                            '<p style="font-size: 16px;">No reference images available for this body part</p>'
+                                            "</div>",
+                                            visible=False,
+                                        )
                                         gallery_right_flank = gr.Gallery(
                                             columns=6,
                                             height=400,
@@ -974,6 +1016,12 @@ Click a row to view detailed feature matching visualization and all reference im
 
                                     with gr.Tab("🪶 Tail"):
                                         tail_indicator = gr.Markdown("")
+                                        tail_empty_message = gr.Markdown(
+                                            value='<div style="text-align: center; padding: 60px 20px; color: #888;">'
+                                            '<p style="font-size: 16px;">No reference images available for this body part</p>'
+                                            "</div>",
+                                            visible=False,
+                                        )
                                         gallery_tail = gr.Gallery(
                                             columns=6,
                                             height=400,
@@ -983,6 +1031,12 @@ Click a row to view detailed feature matching visualization and all reference im
 
                                     with gr.Tab("📋 Other"):
                                         misc_indicator = gr.Markdown("")
+                                        misc_empty_message = gr.Markdown(
+                                            value='<div style="text-align: center; padding: 60px 20px; color: #888;">'
+                                            '<p style="font-size: 16px;">No reference images available for this body part</p>'
+                                            "</div>",
+                                            visible=False,
+                                        )
                                         gallery_misc = gr.Gallery(
                                             columns=6,
                                             height=400,
@@ -1026,6 +1080,11 @@ Click a row to view detailed feature matching visualization and all reference im
                         right_flank_indicator,
                         tail_indicator,
                         misc_indicator,
+                        head_empty_message,
+                        left_flank_empty_message,
+                        right_flank_empty_message,
+                        tail_empty_message,
+                        misc_empty_message,
                         gallery_head,
                         gallery_left_flank,
                         gallery_right_flank,
