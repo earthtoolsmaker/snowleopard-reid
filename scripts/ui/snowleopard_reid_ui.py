@@ -461,13 +461,15 @@ def run_identification(
         top_leopard_name = top_match["leopard_name"]
         top_wasserstein = top_match["wasserstein"]
 
-        # Determine if it's a confident match (higher Wasserstein = better)
-        if top_wasserstein > 0.2:
-            confidence_indicator = "✅"
-        elif top_wasserstein > 0.1:
-            confidence_indicator = "⚠️"
+        # Determine confidence level (higher Wasserstein = better match)
+        if top_wasserstein >= 0.12:
+            confidence_indicator = "🔵"  # Excellent
+        elif top_wasserstein >= 0.07:
+            confidence_indicator = "🟢"  # Good
+        elif top_wasserstein >= 0.04:
+            confidence_indicator = "🟡"  # Fair
         else:
-            confidence_indicator = "❓"
+            confidence_indicator = "🔴"  # Uncertain
 
         result_text = f"## {confidence_indicator} {top_leopard_name}"
 
@@ -500,8 +502,6 @@ def run_identification(
             rank = match["rank"]
             leopard_name = match["leopard_name"]
             wasserstein = match["wasserstein"]
-            auc = match["auc"]
-            num_matches = match["num_matches"]
             catalog_img_path = Path(match["filepath"])
 
             # Get location from catalog metadata
@@ -523,12 +523,14 @@ def run_identification(
                         pass
 
             # Confidence indicator (higher Wasserstein = better match)
-            if wasserstein > 0.2:
-                indicator = "✅"
-            elif wasserstein > 0.1:
-                indicator = "⚠️"
+            if wasserstein >= 0.12:
+                indicator = "🔵"  # Excellent
+            elif wasserstein >= 0.07:
+                indicator = "🟢"  # Good
+            elif wasserstein >= 0.04:
+                indicator = "🟡"  # Fair
             else:
-                indicator = "❓"
+                indicator = "🔴"  # Uncertain
 
             # Create visualizations for this match
             npz_path = pairwise_dir / f"rank_{rank:02d}_{match['catalog_id']}.npz"
@@ -564,8 +566,6 @@ def run_identification(
                     leopard_name,
                     location,
                     f"{wasserstein:.4f}",
-                    f"{auc:.4f}",
-                    num_matches,
                 ]
             )
 
@@ -1046,7 +1046,10 @@ View the internal processing steps: segmentation mask, cropped leopard, and extr
                             with gr.Tab("Top Matches"):
                                 gr.Markdown("""
 Click a row to view detailed feature matching visualization and all reference images for that leopard.
-**Higher Wasserstein distance = better match** (typical range: 0.1-0.3)
+
+**Higher Wasserstein distance = better match** (typical range: 0.04-0.27)
+
+**Confidence Levels:** 🔵 Excellent (≥0.12) | 🟢 Good (≥0.07) | 🟡 Fair (≥0.04) | 🔴 Uncertain (<0.04)
                                 """)
 
                                 matches_dataset = gr.Dataframe(
@@ -1056,13 +1059,11 @@ Click a row to view detailed feature matching visualization and all reference im
                                         "Leopard Name",
                                         "Location",
                                         "Wasserstein",
-                                        "AUC",
-                                        "Matches",
                                     ],
                                     label="Top Matches",
-                                    interactive=False,
+                                    interactive=True,
                                     wrap=True,
-                                    col_count=(7, "fixed"),
+                                    col_count=(5, "fixed"),
                                 )
 
                                 # Tabbed visualization views
