@@ -13,3 +13,5 @@ yolo*.pt
 
 # Model checkpoints
 data/04_models/SAM_HQ/*.pth
+
+.gradio/
