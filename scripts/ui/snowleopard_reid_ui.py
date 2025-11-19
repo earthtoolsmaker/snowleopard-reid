@@ -309,13 +309,32 @@ def run_identification(
         Tuple of UI components to update
     """
     if image is None:
+        # Return 25 empty outputs (6 pipeline + 19 rank 1 details)
         return (
-            "⚠️ Please upload an image first",
-            None,
-            None,
-            None,
-            [],
-            gr.update(visible=False),
+            "⚠️ Please upload an image first",  # 1. result_text
+            None,  # 2. seg_viz
+            None,  # 3. cropped_image
+            None,  # 4. extracted_kpts_viz
+            [],  # 5. dataset_samples
+            gr.update(visible=False),  # 6. viz_tabs
+            gr.update(value=None),  # 7. matched_kpts_viz
+            gr.update(value=None),  # 8. clean_comparison_viz
+            gr.update(value=""),  # 9. header
+            gr.update(value=""),  # 10. head indicator
+            gr.update(value=""),  # 11. left_flank indicator
+            gr.update(value=""),  # 12. right_flank indicator
+            gr.update(value=""),  # 13. tail indicator
+            gr.update(value=""),  # 14. misc indicator
+            gr.update(visible=False),  # 15. head empty message
+            gr.update(visible=False),  # 16. left_flank empty message
+            gr.update(visible=False),  # 17. right_flank empty message
+            gr.update(visible=False),  # 18. tail empty message
+            gr.update(visible=False),  # 19. misc empty message
+            gr.update(value=[]),  # 20. head gallery
+            gr.update(value=[]),  # 21. left_flank gallery
+            gr.update(value=[]),  # 22. right_flank gallery
+            gr.update(value=[]),  # 23. tail gallery
+            gr.update(value=[]),  # 24. misc gallery
         )
 
     # Convert filter selections to None if "all" is selected
@@ -386,13 +405,32 @@ def run_identification(
         if not predictions:
             logger.warning("No predictions found from segmentation")
             logger.warning(f"Full segmentation stage: {seg_stage}")
+            # Return 25 empty outputs (6 pipeline + 19 rank 1 details)
             return (
-                "❌ No snow leopards detected in image",
-                None,
-                None,
-                None,
-                [],
-                gr.update(visible=False),
+                "❌ No snow leopards detected in image",  # 1. result_text
+                None,  # 2. seg_viz
+                None,  # 3. cropped_image
+                None,  # 4. extracted_kpts_viz
+                [],  # 5. dataset_samples
+                gr.update(visible=False),  # 6. viz_tabs
+                gr.update(value=None),  # 7. matched_kpts_viz
+                gr.update(value=None),  # 8. clean_comparison_viz
+                gr.update(value=""),  # 9. header
+                gr.update(value=""),  # 10. head indicator
+                gr.update(value=""),  # 11. left_flank indicator
+                gr.update(value=""),  # 12. right_flank indicator
+                gr.update(value=""),  # 13. tail indicator
+                gr.update(value=""),  # 14. misc indicator
+                gr.update(visible=False),  # 15. head empty message
+                gr.update(visible=False),  # 16. left_flank empty message
+                gr.update(visible=False),  # 17. right_flank empty message
+                gr.update(visible=False),  # 18. tail empty message
+                gr.update(visible=False),  # 19. misc empty message
+                gr.update(value=[]),  # 20. head gallery
+                gr.update(value=[]),  # 21. left_flank gallery
+                gr.update(value=[]),  # 22. right_flank gallery
+                gr.update(value=[]),  # 23. tail gallery
+                gr.update(value=[]),  # 24. misc gallery
             )
 
         # Step 2: Select best mask
@@ -447,13 +485,32 @@ def run_identification(
         matches = match_stage["data"]["matches"]
 
         if not matches:
+            # Return 25 empty outputs (6 pipeline + 19 rank 1 details)
             return (
-                "❌ No matches found in catalog",
-                None,
-                cropped_image_pil,
-                None,
-                [],
-                gr.update(visible=False),
+                "❌ No matches found in catalog",  # 1. result_text
+                None,  # 2. seg_viz
+                cropped_image_pil,  # 3. cropped_image
+                None,  # 4. extracted_kpts_viz
+                [],  # 5. dataset_samples
+                gr.update(visible=False),  # 6. viz_tabs
+                gr.update(value=None),  # 7. matched_kpts_viz
+                gr.update(value=None),  # 8. clean_comparison_viz
+                gr.update(value=""),  # 9. header
+                gr.update(value=""),  # 10. head indicator
+                gr.update(value=""),  # 11. left_flank indicator
+                gr.update(value=""),  # 12. right_flank indicator
+                gr.update(value=""),  # 13. tail indicator
+                gr.update(value=""),  # 14. misc indicator
+                gr.update(visible=False),  # 15. head empty message
+                gr.update(visible=False),  # 16. left_flank empty message
+                gr.update(visible=False),  # 17. right_flank empty message
+                gr.update(visible=False),  # 18. tail empty message
+                gr.update(visible=False),  # 19. misc empty message
+                gr.update(value=[]),  # 20. head gallery
+                gr.update(value=[]),  # 21. left_flank gallery
+                gr.update(value=[]),  # 22. right_flank gallery
+                gr.update(value=[]),  # 23. tail gallery
+                gr.update(value=[]),  # 24. misc gallery
             )
 
         # Top match
@@ -471,7 +528,7 @@ def run_identification(
         else:
             confidence_indicator = "🔴"  # Uncertain
 
-        result_text = f"## {confidence_indicator} {top_leopard_name}"
+        result_text = f"## {confidence_indicator} {top_leopard_name.title()}"
 
         # Create segmentation visualization
         seg_viz = create_segmentation_viz(
@@ -563,8 +620,8 @@ def run_identification(
                 [
                     rank,
                     indicator,
-                    leopard_name,
-                    location,
+                    leopard_name.title(),
+                    location.title(),
                     f"{wasserstein:.4f}",
                 ]
             )
@@ -578,24 +635,50 @@ def run_identification(
         LOADED_MODELS["current_filter_body_parts"] = filter_body_parts
         LOADED_MODELS["current_temp_dir"] = temp_dir
 
+        # Automatically load rank 1 details (visualizations + galleries)
+        rank1_details = load_match_details_for_rank(rank=1)
+
+        # Return 25 outputs total:
+        # - 6 pipeline outputs (result_text, seg_viz, cropped_image, extracted_kpts_viz, dataset_samples, viz_tabs)
+        # - 19 rank 1 details (from load_match_details_for_rank)
         return (
-            result_text,
-            seg_viz,
-            cropped_image_pil,
-            extracted_kpts_viz,
-            dataset_samples,
-            gr.update(visible=False),  # viz_tabs hidden until match selected
+            result_text,  # 1. Top match result text
+            seg_viz,  # 2. Segmentation overlay
+            cropped_image_pil,  # 3. Cropped leopard
+            extracted_kpts_viz,  # 4. Extracted keypoints
+            dataset_samples,  # 5. Matches table data
+            # Unpack all 19 rank 1 details:
+            *rank1_details,  # 6-24. viz_tabs, visualizations, header, indicators, galleries
         )
 
     except Exception as e:
         logger.error(f"Error processing image: {e}", exc_info=True)
+        # Return 25 empty outputs (6 pipeline + 19 rank 1 details)
         return (
-            f"❌ Error processing image: {str(e)}",
-            None,
-            None,
-            None,
-            [],
-            gr.update(visible=False),
+            f"❌ Error processing image: {str(e)}",  # 1. result_text
+            None,  # 2. seg_viz
+            None,  # 3. cropped_image
+            None,  # 4. extracted_kpts_viz
+            [],  # 5. dataset_samples
+            gr.update(visible=False),  # 6. viz_tabs
+            gr.update(value=None),  # 7. matched_kpts_viz
+            gr.update(value=None),  # 8. clean_comparison_viz
+            gr.update(value=""),  # 9. header
+            gr.update(value=""),  # 10. head indicator
+            gr.update(value=""),  # 11. left_flank indicator
+            gr.update(value=""),  # 12. right_flank indicator
+            gr.update(value=""),  # 13. tail indicator
+            gr.update(value=""),  # 14. misc indicator
+            gr.update(visible=False),  # 15. head empty message
+            gr.update(visible=False),  # 16. left_flank empty message
+            gr.update(visible=False),  # 17. right_flank empty message
+            gr.update(visible=False),  # 18. tail empty message
+            gr.update(visible=False),  # 19. misc empty message
+            gr.update(value=[]),  # 20. head gallery
+            gr.update(value=[]),  # 21. left_flank gallery
+            gr.update(value=[]),  # 22. right_flank gallery
+            gr.update(value=[]),  # 23. tail gallery
+            gr.update(value=[]),  # 24. misc gallery
         )
 
 
@@ -626,20 +709,25 @@ def create_segmentation_viz(image_path, mask):
     return Image.fromarray(blended)
 
 
-def on_match_selected(evt: gr.SelectData):
-    """Handle selection of a match from the dataset table.
+def load_match_details_for_rank(rank: int) -> tuple:
+    """Load all match details (visualizations + galleries) for a specific rank.
 
-    Returns viz_tabs visibility, both visualizations, header, indicators, empty messages,
-    and galleries organized by body part.
+    This is a reusable helper function that encapsulates the logic for loading
+    match visualizations, galleries, and metadata for a given rank. Used by both
+    the automatic rank 1 display after pipeline completion and the interactive
+    row selection handler.
+
+    Args:
+        rank: The rank to load (1-indexed)
+
+    Returns:
+        Tuple of 19 Gradio component updates:
+        (viz_tabs, matched_kpts_viz, clean_comparison_viz, header,
+         head_indicator, left_flank_indicator, right_flank_indicator, tail_indicator, misc_indicator,
+         head_empty_message, left_flank_empty_message, right_flank_empty_message,
+         tail_empty_message, misc_empty_message,
+         gallery_head, gallery_left_flank, gallery_right_flank, gallery_tail, gallery_misc)
     """
-    # evt.index is [row, col] for Dataframe, we want row
-    if isinstance(evt.index, (list, tuple)):
-        selected_row = evt.index[0]
-    else:
-        selected_row = evt.index
-
-    selected_rank = selected_row + 1  # Ranks are 1-indexed
-
     # Get stored data from global state
     match_visualizations = LOADED_MODELS.get("current_match_visualizations", {})
     clean_comparison_visualizations = LOADED_MODELS.get(
@@ -649,15 +737,15 @@ def on_match_selected(evt: gr.SelectData):
     filter_body_parts = LOADED_MODELS.get("current_filter_body_parts")
     catalog_root = LOADED_MODELS.get("catalog_root")
 
-    # Find the selected match
+    # Find the match for the requested rank
     selected_match = None
     for match in enriched_matches:
-        if match["rank"] == selected_rank:
+        if match["rank"] == rank:
             selected_match = match
             break
 
-    if not selected_match or selected_rank not in match_visualizations:
-        # Return empty updates for all 19 outputs (added viz_tabs + clean_comparison_viz)
+    if not selected_match or rank not in match_visualizations:
+        # Return empty updates for all 19 outputs
         return (
             gr.update(visible=False),  # 1. viz_tabs
             gr.update(value=None),  # 2. matched_kpts_viz
@@ -681,8 +769,8 @@ def on_match_selected(evt: gr.SelectData):
         )
 
     # Get both visualizations
-    match_viz = match_visualizations[selected_rank]
-    clean_viz = clean_comparison_visualizations.get(selected_rank)
+    match_viz = match_visualizations[rank]
+    clean_viz = clean_comparison_visualizations.get(rank)
 
     # Create dynamic header with leopard name
     leopard_name = selected_match["leopard_name"]
@@ -760,6 +848,24 @@ def on_match_selected(evt: gr.SelectData):
             value=galleries.get("misc", []), visible=not is_empty("misc")
         ),  # 19. misc gallery
     )
+
+
+def on_match_selected(evt: gr.SelectData):
+    """Handle selection of a match from the dataset table.
+
+    Returns viz_tabs visibility, both visualizations, header, indicators, empty messages,
+    and galleries organized by body part.
+    """
+    # evt.index is [row, col] for Dataframe, we want row
+    if isinstance(evt.index, (list, tuple)):
+        selected_row = evt.index[0]
+    else:
+        selected_row = evt.index
+
+    selected_rank = selected_row + 1  # Ranks are 1-indexed
+
+    # Delegate to the reusable helper function
+    return load_match_details_for_rank(selected_rank)
 
 
 def load_matched_individual_gallery_by_body_part(
@@ -1185,12 +1291,32 @@ Click a row to view detailed feature matching visualization and all reference im
                         body_part_filter,
                     ],
                     outputs=[
+                        # Pipeline outputs (6 total)
                         result_text,
                         seg_viz,
                         cropped_image,
                         extracted_kpts_viz,
                         matches_dataset,
+                        # Rank 1 auto-display outputs (19 total)
                         viz_tabs,
+                        matched_kpts_viz,
+                        clean_comparison_viz,
+                        selected_match_header,
+                        head_indicator,
+                        left_flank_indicator,
+                        right_flank_indicator,
+                        tail_indicator,
+                        misc_indicator,
+                        head_empty_message,
+                        left_flank_empty_message,
+                        right_flank_empty_message,
+                        tail_empty_message,
+                        misc_empty_message,
+                        gallery_head,
+                        gallery_left_flank,
+                        gallery_right_flank,
+                        gallery_tail,
+                        gallery_misc,
                     ],
                 )
 
@@ -1289,3 +1415,4 @@ if __name__ == "__main__":
     config = parse_args()
     app = create_app(config)
     app.launch(server_name="127.0.0.1", server_port=config.port, share=config.share)
+    # app.launch(server_name="127.0.0.1", server_port=config.port, share=True)
