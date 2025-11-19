@@ -230,6 +230,7 @@ def initialize_models(config: AppConfig):
 def run_identification(
     image,
     extractor: str,
+    top_k: int,
     selected_locations: list[str],
     selected_body_parts: list[str],
     config: AppConfig,
@@ -239,6 +240,7 @@ def run_identification(
     Args:
         image: PIL Image from Gradio upload
         extractor: Feature extractor to use ('sift', 'superpoint', 'disk', 'aliked')
+        top_k: Number of top matches to return
         selected_locations: List of selected locations (includes "all" for no filtering)
         selected_body_parts: List of selected body parts (includes "all" for no filtering)
         config: Application configuration
@@ -364,7 +366,7 @@ def run_identification(
         match_stage = run_matching_stage(
             query_features=query_features,
             catalog_path=config.catalog_root,
-            top_k=config.top_k,
+            top_k=top_k,
             extractor=extractor,
             device=device,
             query_image_path=str(cropped_path),
@@ -867,19 +869,6 @@ The system will detect the leopard, extract distinctive features, and match agai
                             label="Example Images",
                         )
 
-                        # Feature extractor dropdown
-                        available_extractors = get_available_extractors(
-                            config.catalog_root
-                        )
-                        extractor_dropdown = gr.Dropdown(
-                            choices=available_extractors,
-                            value=available_extractors[0]
-                            if available_extractors
-                            else "sift",
-                            label="Feature Extractor",
-                            info=f"Select extractor (available in catalog: {', '.join(available_extractors)})",
-                        )
-
                         # Location filter dropdown
                         available_locations = get_available_locations(
                             config.catalog_root
@@ -903,6 +892,35 @@ The system will detect the leopard, extract distinctive features, and match agai
                             label="Filter by Body Part",
                             info="Select body parts to match (default: all body parts)",
                         )
+
+                        # Advanced Configuration Accordion
+                        with gr.Accordion("⚙️ Advanced Configuration", open=False):
+                            with gr.Row():
+                                # Feature extractor dropdown
+                                available_extractors = get_available_extractors(
+                                    config.catalog_root
+                                )
+                                extractor_dropdown = gr.Dropdown(
+                                    choices=available_extractors,
+                                    value=available_extractors[0]
+                                    if available_extractors
+                                    else "sift",
+                                    label="Feature Extractor",
+                                    info=f"Available: {', '.join(available_extractors)}",
+                                    scale=1,
+                                )
+
+                                # Top-K parameter
+                                top_k_input = gr.Number(
+                                    value=config.top_k,
+                                    label="Top-K Matches",
+                                    info="Number of top matches to return",
+                                    minimum=1,
+                                    maximum=20,
+                                    step=1,
+                                    precision=0,
+                                    scale=1,
+                                )
 
                         submit_btn = gr.Button(
                             value="🔍 Identify Snow Leopard",
@@ -951,10 +969,9 @@ Click a row to view detailed feature matching visualization and all reference im
                                         "AUC",
                                         "Matches",
                                     ],
-                                    label="Top 5 Matches",
+                                    label="Top Matches",
                                     interactive=False,
                                     wrap=True,
-                                    row_count=(5, "fixed"),
                                     col_count=(7, "fixed"),
                                 )
 
@@ -1046,9 +1063,10 @@ Click a row to view detailed feature matching visualization and all reference im
 
                 # Connect submit button
                 submit_btn.click(
-                    fn=lambda img, ext, locs, parts: run_identification(
+                    fn=lambda img, ext, top_k, locs, parts: run_identification(
                         image=img,
                         extractor=ext,
+                        top_k=int(top_k),
                         selected_locations=locs,
                         selected_body_parts=parts,
                         config=config,
@@ -1056,6 +1074,7 @@ Click a row to view detailed feature matching visualization and all reference im
                     inputs=[
                         image_input,
                         extractor_dropdown,
+                        top_k_input,
                         location_filter,
                         body_part_filter,
                     ],
