@@ -1061,7 +1061,6 @@ Click a row to view detailed feature matching visualization and all reference im
                                         "Wasserstein",
                                     ],
                                     label="Top Matches",
-                                    interactive=True,
                                     wrap=True,
                                     col_count=(5, "fixed"),
                                 )
