@@ -886,7 +886,7 @@ The system will detect the leopard, extract distinctive features, and match agai
                         )
 
                     # Right column: Results
-                    with gr.Column(scale=2):
+                    with gr.Column(scale=4):
                         # Top-1 prediction
                         result_text = gr.Markdown("")
 
