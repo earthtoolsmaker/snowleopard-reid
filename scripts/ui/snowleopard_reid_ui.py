@@ -62,6 +62,7 @@ from snowleopard_reid.pipeline.stages import (
 from snowleopard_reid.visualization import (
     draw_keypoints_overlay,
     draw_matched_keypoints,
+    draw_side_by_side_comparison,
 )
 
 # Configure logging
@@ -425,6 +426,7 @@ def run_identification(
         # Build dataset for top-K matches table
         dataset_samples = []
         match_visualizations = {}
+        clean_comparison_visualizations = {}
 
         for match in matches:
             rank = match["rank"]
@@ -460,11 +462,13 @@ def run_identification(
             else:
                 indicator = "❓"
 
-            # Create visualization for this match
+            # Create visualizations for this match
             npz_path = pairwise_dir / f"rank_{rank:02d}_{match['catalog_id']}.npz"
             if npz_path.exists():
                 try:
                     pairwise_data = np.load(npz_path)
+
+                    # Create matched keypoints visualization
                     match_viz = draw_matched_keypoints(
                         query_image_path=cropped_path,
                         catalog_image_path=catalog_img_path,
@@ -474,8 +478,15 @@ def run_identification(
                         max_matches=100,
                     )
                     match_visualizations[rank] = match_viz
+
+                    # Create clean comparison visualization
+                    clean_viz = draw_side_by_side_comparison(
+                        query_image_path=cropped_path,
+                        catalog_image_path=catalog_img_path,
+                    )
+                    clean_comparison_visualizations[rank] = clean_viz
                 except Exception as e:
-                    logger.error(f"Error creating visualization for rank {rank}: {e}")
+                    logger.error(f"Error creating visualizations for rank {rank}: {e}")
 
             # Format for table (as list, not dict)
             dataset_samples.append(
@@ -492,6 +503,7 @@ def run_identification(
 
         # Store match visualizations, enriched matches, filters, and temp_dir in global state
         LOADED_MODELS["current_match_visualizations"] = match_visualizations
+        LOADED_MODELS["current_clean_comparison_visualizations"] = clean_comparison_visualizations
         LOADED_MODELS["current_enriched_matches"] = matches
         LOADED_MODELS["current_filter_body_parts"] = filter_body_parts
         LOADED_MODELS["current_temp_dir"] = temp_dir
@@ -502,7 +514,7 @@ def run_identification(
             cropped_image_pil,
             extracted_kpts_viz,
             dataset_samples,
-            gr.update(visible=True),
+            gr.update(visible=False),  # viz_tabs hidden until match selected
         )
 
     except Exception as e:
@@ -547,7 +559,8 @@ def create_segmentation_viz(image_path, mask):
 def on_match_selected(evt: gr.SelectData):
     """Handle selection of a match from the dataset table.
 
-    Returns visualization, header, indicators, empty messages, and galleries organized by body part.
+    Returns viz_tabs visibility, both visualizations, header, indicators, empty messages,
+    and galleries organized by body part.
     """
     # evt.index is [row, col] for Dataframe, we want row
     if isinstance(evt.index, (list, tuple)):
@@ -559,6 +572,7 @@ def on_match_selected(evt: gr.SelectData):
 
     # Get stored data from global state
     match_visualizations = LOADED_MODELS.get("current_match_visualizations", {})
+    clean_comparison_visualizations = LOADED_MODELS.get("current_clean_comparison_visualizations", {})
     enriched_matches = LOADED_MODELS.get("current_enriched_matches", [])
     filter_body_parts = LOADED_MODELS.get("current_filter_body_parts")
     catalog_root = LOADED_MODELS.get("catalog_root")
@@ -571,29 +585,32 @@ def on_match_selected(evt: gr.SelectData):
             break
 
     if not selected_match or selected_rank not in match_visualizations:
-        # Return empty updates for all 17 outputs
+        # Return empty updates for all 19 outputs (added viz_tabs + clean_comparison_viz)
         return (
-            gr.update(visible=False),  # 1. visualization
-            gr.update(value=""),  # 2. header
-            gr.update(value=""),  # 3. head indicator
-            gr.update(value=""),  # 4. left_flank indicator
-            gr.update(value=""),  # 5. right_flank indicator
-            gr.update(value=""),  # 6. tail indicator
-            gr.update(value=""),  # 7. misc indicator
-            gr.update(visible=False),  # 8. head empty message
-            gr.update(visible=False),  # 9. left_flank empty message
-            gr.update(visible=False),  # 10. right_flank empty message
-            gr.update(visible=False),  # 11. tail empty message
-            gr.update(visible=False),  # 12. misc empty message
-            gr.update(value=[]),  # 13. head gallery
-            gr.update(value=[]),  # 14. left_flank gallery
-            gr.update(value=[]),  # 15. right_flank gallery
-            gr.update(value=[]),  # 16. tail gallery
-            gr.update(value=[]),  # 17. misc gallery
+            gr.update(visible=False),  # 1. viz_tabs
+            gr.update(value=None),  # 2. matched_kpts_viz
+            gr.update(value=None),  # 3. clean_comparison_viz
+            gr.update(value=""),  # 4. header
+            gr.update(value=""),  # 5. head indicator
+            gr.update(value=""),  # 6. left_flank indicator
+            gr.update(value=""),  # 7. right_flank indicator
+            gr.update(value=""),  # 8. tail indicator
+            gr.update(value=""),  # 9. misc indicator
+            gr.update(visible=False),  # 10. head empty message
+            gr.update(visible=False),  # 11. left_flank empty message
+            gr.update(visible=False),  # 12. right_flank empty message
+            gr.update(visible=False),  # 13. tail empty message
+            gr.update(visible=False),  # 14. misc empty message
+            gr.update(value=[]),  # 15. head gallery
+            gr.update(value=[]),  # 16. left_flank gallery
+            gr.update(value=[]),  # 17. right_flank gallery
+            gr.update(value=[]),  # 18. tail gallery
+            gr.update(value=[]),  # 19. misc gallery
         )
 
-    # Get visualization
+    # Get both visualizations
     match_viz = match_visualizations[selected_rank]
+    clean_viz = clean_comparison_visualizations.get(selected_rank)
 
     # Create dynamic header with leopard name
     leopard_name = selected_match["leopard_name"]
@@ -641,33 +658,35 @@ def on_match_selected(evt: gr.SelectData):
         return len(galleries.get(body_part, [])) == 0
 
     return (
-        gr.update(value=match_viz, visible=True),  # 1. visualization
-        gr.update(value=header_text),  # 2. header
-        gr.update(value=get_indicator("head")),  # 3. head indicator
-        gr.update(value=get_indicator("left_flank")),  # 4. left_flank indicator
-        gr.update(value=get_indicator("right_flank")),  # 5. right_flank indicator
-        gr.update(value=get_indicator("tail")),  # 6. tail indicator
-        gr.update(value=get_indicator("misc")),  # 7. misc indicator
-        gr.update(visible=is_empty("head")),  # 8. head empty message
-        gr.update(visible=is_empty("left_flank")),  # 9. left_flank empty message
-        gr.update(visible=is_empty("right_flank")),  # 10. right_flank empty message
-        gr.update(visible=is_empty("tail")),  # 11. tail empty message
-        gr.update(visible=is_empty("misc")),  # 12. misc empty message
+        gr.update(visible=True),  # 1. viz_tabs (make tabs visible)
+        gr.update(value=match_viz),  # 2. matched_kpts_viz
+        gr.update(value=clean_viz),  # 3. clean_comparison_viz
+        gr.update(value=header_text),  # 4. header
+        gr.update(value=get_indicator("head")),  # 5. head indicator
+        gr.update(value=get_indicator("left_flank")),  # 6. left_flank indicator
+        gr.update(value=get_indicator("right_flank")),  # 7. right_flank indicator
+        gr.update(value=get_indicator("tail")),  # 8. tail indicator
+        gr.update(value=get_indicator("misc")),  # 9. misc indicator
+        gr.update(visible=is_empty("head")),  # 10. head empty message
+        gr.update(visible=is_empty("left_flank")),  # 11. left_flank empty message
+        gr.update(visible=is_empty("right_flank")),  # 12. right_flank empty message
+        gr.update(visible=is_empty("tail")),  # 13. tail empty message
+        gr.update(visible=is_empty("misc")),  # 14. misc empty message
         gr.update(
             value=galleries.get("head", []), visible=not is_empty("head")
-        ),  # 13. head gallery
+        ),  # 15. head gallery
         gr.update(
             value=galleries.get("left_flank", []), visible=not is_empty("left_flank")
-        ),  # 14. left_flank gallery
+        ),  # 16. left_flank gallery
         gr.update(
             value=galleries.get("right_flank", []), visible=not is_empty("right_flank")
-        ),  # 15. right_flank gallery
+        ),  # 17. right_flank gallery
         gr.update(
             value=galleries.get("tail", []), visible=not is_empty("tail")
-        ),  # 16. tail gallery
+        ),  # 18. tail gallery
         gr.update(
             value=galleries.get("misc", []), visible=not is_empty("misc")
-        ),  # 17. misc gallery
+        ),  # 19. misc gallery
     )
 
 
@@ -975,11 +994,27 @@ Click a row to view detailed feature matching visualization and all reference im
                                     col_count=(7, "fixed"),
                                 )
 
-                                selected_match_viz = gr.Image(
-                                    label="Selected Match Visualization (Feature Keypoints)",
-                                    type="pil",
-                                    visible=False,
-                                )
+                                # Tabbed visualization views
+                                with gr.Tabs(visible=False) as viz_tabs:
+                                    with gr.Tab("🔗 Matched Keypoints"):
+                                        gr.Markdown(
+                                            "Feature matching with keypoints and confidence-coded connecting lines. "
+                                            "**Green** = high confidence, **Yellow** = medium, **Red** = low."
+                                        )
+                                        matched_kpts_viz = gr.Image(
+                                            type="pil",
+                                            show_label=False,
+                                        )
+
+                                    with gr.Tab("🖼️ Clean Comparison"):
+                                        gr.Markdown(
+                                            "Side-by-side comparison without feature annotations. "
+                                            "Useful for assessing overall visual similarity and spotting patterns."
+                                        )
+                                        clean_comparison_viz = gr.Image(
+                                            type="pil",
+                                            show_label=False,
+                                        )
 
                                 # Dynamic header showing matched leopard name
                                 selected_match_header = gr.Markdown("", visible=True)
@@ -1084,7 +1119,7 @@ Click a row to view detailed feature matching visualization and all reference im
                         cropped_image,
                         extracted_kpts_viz,
                         matches_dataset,
-                        selected_match_viz,
+                        viz_tabs,
                     ],
                 )
 
@@ -1092,7 +1127,9 @@ Click a row to view detailed feature matching visualization and all reference im
                 matches_dataset.select(
                     fn=on_match_selected,
                     outputs=[
-                        selected_match_viz,
+                        viz_tabs,
+                        matched_kpts_viz,
+                        clean_comparison_viz,
                         selected_match_header,
                         head_indicator,
                         left_flank_indicator,

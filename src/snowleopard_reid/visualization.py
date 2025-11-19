@@ -153,3 +153,63 @@ def draw_matched_keypoints(
         cv2.circle(canvas, catalog_pt, 5, (0, 0, 255), -1)
 
     return Image.fromarray(canvas)
+
+
+def draw_side_by_side_comparison(
+    query_image_path: Path | str,
+    catalog_image_path: Path | str,
+    max_height: int = 800,
+) -> Image.Image:
+    """Draw query and catalog images side-by-side without keypoints or annotations.
+
+    This provides a clean visual comparison of the two images without the visual
+    clutter of feature matching overlays. Useful for assessing overall visual
+    similarity and spotting patterns like spots, scars, or markings.
+
+    Args:
+        query_image_path: Path to query image
+        catalog_image_path: Path to catalog/reference image
+        max_height: Maximum height for resizing (default: 800)
+
+    Returns:
+        PIL Image with side-by-side images (no annotations)
+    """
+    # Load images
+    query_img = cv2.imread(str(query_image_path))
+    catalog_img = cv2.imread(str(catalog_image_path))
+
+    # Convert to RGB
+    query_rgb = cv2.cvtColor(query_img, cv2.COLOR_BGR2RGB)
+    catalog_rgb = cv2.cvtColor(catalog_img, cv2.COLOR_BGR2RGB)
+
+    # Resize images to same height for side-by-side display
+    query_h, query_w = query_rgb.shape[:2]
+    catalog_h, catalog_w = catalog_rgb.shape[:2]
+
+    # Calculate scaling factors
+    if query_h > max_height or catalog_h > max_height:
+        query_scale = max_height / query_h
+        catalog_scale = max_height / catalog_h
+    else:
+        query_scale = 1.0
+        catalog_scale = 1.0
+
+    # Resize images
+    new_query_h = int(query_h * query_scale)
+    new_query_w = int(query_w * query_scale)
+    new_catalog_h = int(catalog_h * catalog_scale)
+    new_catalog_w = int(catalog_w * catalog_scale)
+
+    query_resized = cv2.resize(query_rgb, (new_query_w, new_query_h))
+    catalog_resized = cv2.resize(catalog_rgb, (new_catalog_w, new_catalog_h))
+
+    # Create side-by-side canvas
+    combined_h = max(new_query_h, new_catalog_h)
+    combined_w = new_query_w + new_catalog_w
+    canvas = np.zeros((combined_h, combined_w, 3), dtype=np.uint8)
+
+    # Place images on canvas (no keypoints or lines)
+    canvas[:new_query_h, :new_query_w] = query_resized
+    canvas[:new_catalog_h, new_query_w : new_query_w + new_catalog_w] = catalog_resized
+
+    return Image.fromarray(canvas)
