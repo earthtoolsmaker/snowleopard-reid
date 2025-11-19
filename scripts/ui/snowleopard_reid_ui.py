@@ -918,32 +918,31 @@ The system will detect the leopard, extract distinctive features, and match agai
 
                         # Advanced Configuration Accordion
                         with gr.Accordion("⚙️ Advanced Configuration", open=False):
-                            with gr.Row():
-                                # Feature extractor dropdown
-                                available_extractors = get_available_extractors(
-                                    config.catalog_root
-                                )
-                                extractor_dropdown = gr.Dropdown(
-                                    choices=available_extractors,
-                                    value=available_extractors[0]
-                                    if available_extractors
-                                    else "sift",
-                                    label="Feature Extractor",
-                                    info=f"Available: {', '.join(available_extractors)}",
-                                    scale=1,
-                                )
+                            # Feature extractor dropdown
+                            available_extractors = get_available_extractors(
+                                config.catalog_root
+                            )
+                            extractor_dropdown = gr.Dropdown(
+                                choices=available_extractors,
+                                value=available_extractors[0]
+                                if available_extractors
+                                else "sift",
+                                label="Feature Extractor",
+                                info=f"Available: {', '.join(available_extractors)}",
+                                scale=1,
+                            )
 
-                                # Top-K parameter
-                                top_k_input = gr.Number(
-                                    value=config.top_k,
-                                    label="Top-K Matches",
-                                    info="Number of top matches to return",
-                                    minimum=1,
-                                    maximum=20,
-                                    step=1,
-                                    precision=0,
-                                    scale=1,
-                                )
+                            # Top-K parameter
+                            top_k_input = gr.Number(
+                                value=config.top_k,
+                                label="Top-K Matches",
+                                info="Number of top matches to return",
+                                minimum=1,
+                                maximum=20,
+                                step=1,
+                                precision=0,
+                                scale=1,
+                            )
 
                         submit_btn = gr.Button(
                             value="🔍 Identify Snow Leopard",
