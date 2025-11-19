@@ -1098,9 +1098,13 @@ The system will detect the leopard, extract distinctive features, and match agai
                             )
                             extractor_dropdown = gr.Dropdown(
                                 choices=available_extractors,
-                                value=available_extractors[0]
-                                if available_extractors
-                                else "sift",
+                                value="sift"
+                                if "sift" in available_extractors
+                                else (
+                                    available_extractors[0]
+                                    if available_extractors
+                                    else "sift"
+                                ),
                                 label="Feature Extractor",
                                 info=f"Available: {', '.join(available_extractors)}",
                                 scale=1,

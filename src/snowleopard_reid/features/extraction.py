@@ -7,7 +7,7 @@ using various feature extractors (SIFT, SuperPoint, DISK, ALIKED).
 from pathlib import Path
 
 import torch
-from lightglue import SIFT
+from lightglue import ALIKED, DISK, SIFT, SuperPoint
 from lightglue.utils import load_image, rbd
 from PIL import Image
 
@@ -68,6 +68,198 @@ def extract_sift_features(
     # Extract features
     with torch.no_grad():
         feats = extractor.extract(image)  # auto-resizes image
+        feats = rbd(feats)  # remove batch dimension
+
+    # Move features back to CPU for storage
+    if device != "cpu":
+        feats = {
+            k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in feats.items()
+        }
+
+    return feats
+
+
+def extract_superpoint_features(
+    image_path: Path | str | Image.Image,
+    max_num_keypoints: int = 2048,
+    device: str = "cpu",
+) -> dict[str, torch.Tensor]:
+    """Extract SuperPoint features from an image.
+
+    Args:
+        image_path: Path to image file or PIL Image object
+        max_num_keypoints: Maximum number of keypoints to extract (default: 2048, range: 512-4096)
+        device: Device to run extraction on ('cpu' or 'cuda')
+
+    Returns:
+        Dictionary with keys:
+            - keypoints: Tensor of shape [N, 2] with (x, y) coordinates
+            - descriptors: Tensor of shape [N, 256] with SuperPoint descriptors
+            - scores: Tensor of shape [N] with keypoint scores
+            - image_size: Tensor of shape [2] with (width, height)
+
+    Raises:
+        ValueError: If max_num_keypoints is out of valid range
+        FileNotFoundError: If image_path is a string/Path and file doesn't exist
+    """
+    # Validate parameters
+    if not (512 <= max_num_keypoints <= 4096):
+        raise ValueError(
+            f"max_num_keypoints must be in range 512-4096, got {max_num_keypoints}"
+        )
+
+    # Initialize extractor
+    extractor = SuperPoint(max_num_keypoints=max_num_keypoints).eval().to(device)
+
+    # Load image
+    if isinstance(image_path, (str, Path)):
+        image_path = Path(image_path)
+        if not image_path.exists():
+            raise FileNotFoundError(f"Image not found: {image_path}")
+        image = load_image(str(image_path))
+    elif isinstance(image_path, Image.Image):
+        raise TypeError(
+            "PIL Image input not yet supported, please provide path to image file"
+        )
+    else:
+        raise TypeError(
+            f"image_path must be str, Path, or PIL Image, got {type(image_path)}"
+        )
+
+    # Move image to device
+    image = image.to(device)
+
+    # Extract features
+    with torch.no_grad():
+        feats = extractor.extract(image)
+        feats = rbd(feats)  # remove batch dimension
+
+    # Move features back to CPU for storage
+    if device != "cpu":
+        feats = {
+            k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in feats.items()
+        }
+
+    return feats
+
+
+def extract_disk_features(
+    image_path: Path | str | Image.Image,
+    max_num_keypoints: int = 2048,
+    device: str = "cpu",
+) -> dict[str, torch.Tensor]:
+    """Extract DISK features from an image.
+
+    Args:
+        image_path: Path to image file or PIL Image object
+        max_num_keypoints: Maximum number of keypoints to extract (default: 2048, range: 512-4096)
+        device: Device to run extraction on ('cpu' or 'cuda')
+
+    Returns:
+        Dictionary with keys:
+            - keypoints: Tensor of shape [N, 2] with (x, y) coordinates
+            - descriptors: Tensor of shape [N, 128] with DISK descriptors
+            - scores: Tensor of shape [N] with keypoint scores
+            - image_size: Tensor of shape [2] with (width, height)
+
+    Raises:
+        ValueError: If max_num_keypoints is out of valid range
+        FileNotFoundError: If image_path is a string/Path and file doesn't exist
+    """
+    # Validate parameters
+    if not (512 <= max_num_keypoints <= 4096):
+        raise ValueError(
+            f"max_num_keypoints must be in range 512-4096, got {max_num_keypoints}"
+        )
+
+    # Initialize extractor
+    extractor = DISK(max_num_keypoints=max_num_keypoints).eval().to(device)
+
+    # Load image
+    if isinstance(image_path, (str, Path)):
+        image_path = Path(image_path)
+        if not image_path.exists():
+            raise FileNotFoundError(f"Image not found: {image_path}")
+        image = load_image(str(image_path))
+    elif isinstance(image_path, Image.Image):
+        raise TypeError(
+            "PIL Image input not yet supported, please provide path to image file"
+        )
+    else:
+        raise TypeError(
+            f"image_path must be str, Path, or PIL Image, got {type(image_path)}"
+        )
+
+    # Move image to device
+    image = image.to(device)
+
+    # Extract features
+    with torch.no_grad():
+        feats = extractor.extract(image)
+        feats = rbd(feats)  # remove batch dimension
+
+    # Move features back to CPU for storage
+    if device != "cpu":
+        feats = {
+            k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in feats.items()
+        }
+
+    return feats
+
+
+def extract_aliked_features(
+    image_path: Path | str | Image.Image,
+    max_num_keypoints: int = 2048,
+    device: str = "cpu",
+) -> dict[str, torch.Tensor]:
+    """Extract ALIKED features from an image.
+
+    Args:
+        image_path: Path to image file or PIL Image object
+        max_num_keypoints: Maximum number of keypoints to extract (default: 2048, range: 512-4096)
+        device: Device to run extraction on ('cpu' or 'cuda')
+
+    Returns:
+        Dictionary with keys:
+            - keypoints: Tensor of shape [N, 2] with (x, y) coordinates
+            - descriptors: Tensor of shape [N, 128] with ALIKED descriptors
+            - scores: Tensor of shape [N] with keypoint scores
+            - image_size: Tensor of shape [2] with (width, height)
+
+    Raises:
+        ValueError: If max_num_keypoints is out of valid range
+        FileNotFoundError: If image_path is a string/Path and file doesn't exist
+    """
+    # Validate parameters
+    if not (512 <= max_num_keypoints <= 4096):
+        raise ValueError(
+            f"max_num_keypoints must be in range 512-4096, got {max_num_keypoints}"
+        )
+
+    # Initialize extractor
+    extractor = ALIKED(max_num_keypoints=max_num_keypoints).eval().to(device)
+
+    # Load image
+    if isinstance(image_path, (str, Path)):
+        image_path = Path(image_path)
+        if not image_path.exists():
+            raise FileNotFoundError(f"Image not found: {image_path}")
+        image = load_image(str(image_path))
+    elif isinstance(image_path, Image.Image):
+        raise TypeError(
+            "PIL Image input not yet supported, please provide path to image file"
+        )
+    else:
+        raise TypeError(
+            f"image_path must be str, Path, or PIL Image, got {type(image_path)}"
+        )
+
+    # Move image to device
+    image = image.to(device)
+
+    # Extract features
+    with torch.no_grad():
+        feats = extractor.extract(image)
         feats = rbd(feats)  # remove batch dimension
 
     # Move features back to CPU for storage
@@ -184,7 +376,13 @@ def extract_features(
 
     if extractor == "sift":
         return extract_sift_features(image_path, max_num_keypoints, device)
+    elif extractor == "superpoint":
+        return extract_superpoint_features(image_path, max_num_keypoints, device)
+    elif extractor == "disk":
+        return extract_disk_features(image_path, max_num_keypoints, device)
+    elif extractor == "aliked":
+        return extract_aliked_features(image_path, max_num_keypoints, device)
     else:
         raise ValueError(
-            f"Unsupported extractor: {extractor}. Supported extractors: sift"
+            f"Unsupported extractor: {extractor}. Supported extractors: sift, superpoint, disk, aliked"
         )

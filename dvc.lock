@@ -194,12 +194,19 @@ stages:
       size: 19780041
       nfiles: 28
   build_catalog:
-    cmd: uv run python scripts/catalog/build_catalog_from_selection.py 
+    cmd:
+    - uv run python scripts/catalog/build_catalog_from_selection.py 
       --selection-file data/08_catalog/v1.0/selection.yaml --catalog-dir 
-      data/08_catalog/v1.0/database && uv run python 
-      scripts/catalog/extract_catalog_features.py --catalog-dir 
-      data/08_catalog/v1.0/database --extractor sift --max-keypoints 2048 && uv 
-      run python scripts/catalog/generate_catalog_metadata.py --catalog-dir 
+      data/08_catalog/v1.0/database
+    - uv run python scripts/catalog/extract_catalog_features.py --catalog-dir 
+      data/08_catalog/v1.0/database --extractor sift --max-keypoints 2048
+    - uv run python scripts/catalog/extract_catalog_features.py --catalog-dir 
+      data/08_catalog/v1.0/database --extractor superpoint --max-keypoints 2048
+    - uv run python scripts/catalog/extract_catalog_features.py --catalog-dir 
+      data/08_catalog/v1.0/database --extractor disk --max-keypoints 2048
+    - uv run python scripts/catalog/extract_catalog_features.py --catalog-dir 
+      data/08_catalog/v1.0/database --extractor aliked --max-keypoints 2048
+    - uv run python scripts/catalog/generate_catalog_metadata.py --catalog-dir 
       data/08_catalog/v1.0 --catalog-version 1.0.0
     deps:
     - path: data/02_processed/cropped/leopards
@@ -217,8 +224,8 @@ stages:
       size: 4180
     - path: scripts/catalog/extract_catalog_features.py
       hash: md5
-      md5: 012f5b02c82e4878aac9f7598c88b734
-      size: 6377
+      md5: 7f8d1a4f0fb2baa147bc4aca977f3d9e
+      size: 6847
     - path: scripts/catalog/generate_catalog_metadata.py
       hash: md5
       md5: ccecb29c875ea53e7619d8dd631fa6c0
@@ -226,10 +233,10 @@ stages:
     outs:
     - path: data/08_catalog/v1.0/catalog_index.yaml
       hash: md5
-      md5: 8ca9031eb4519305846aa6b8c04a9b9f
-      size: 1541
+      md5: b5fd21ff9901f2e6a89e1e19717b209d
+      size: 1796
     - path: data/08_catalog/v1.0/database
       hash: md5
-      md5: a0263c61545ab74f321342bfad15a303.dir
-      size: 90802606
-      nfiles: 149
+      md5: 40488f4e9559593379cb34824146efb4.dir
+      size: 327579453
+      nfiles: 365
