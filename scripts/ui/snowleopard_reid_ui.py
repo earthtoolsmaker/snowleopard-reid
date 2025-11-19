@@ -503,7 +503,9 @@ def run_identification(
 
         # Store match visualizations, enriched matches, filters, and temp_dir in global state
         LOADED_MODELS["current_match_visualizations"] = match_visualizations
-        LOADED_MODELS["current_clean_comparison_visualizations"] = clean_comparison_visualizations
+        LOADED_MODELS["current_clean_comparison_visualizations"] = (
+            clean_comparison_visualizations
+        )
         LOADED_MODELS["current_enriched_matches"] = matches
         LOADED_MODELS["current_filter_body_parts"] = filter_body_parts
         LOADED_MODELS["current_temp_dir"] = temp_dir
@@ -572,7 +574,9 @@ def on_match_selected(evt: gr.SelectData):
 
     # Get stored data from global state
     match_visualizations = LOADED_MODELS.get("current_match_visualizations", {})
-    clean_comparison_visualizations = LOADED_MODELS.get("current_clean_comparison_visualizations", {})
+    clean_comparison_visualizations = LOADED_MODELS.get(
+        "current_clean_comparison_visualizations", {}
+    )
     enriched_matches = LOADED_MODELS.get("current_enriched_matches", [])
     filter_body_parts = LOADED_MODELS.get("current_filter_body_parts")
     catalog_root = LOADED_MODELS.get("catalog_root")
