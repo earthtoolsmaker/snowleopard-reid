@@ -6,7 +6,7 @@ and explore reference leopards through a browser-based UI powered by Gradio.
 
 Features:
 - Upload snow leopard images or select from examples
-- Run full identification pipeline with interactive progress
+- Run full identification pipeline with GDINO+SAM segmentation
 - View top-K matches with Wasserstein distance scores
 - Explore complete leopard catalog with thumbnails
 - Visualize matched keypoints between query and catalog images
@@ -17,7 +17,7 @@ Usage:
 Example:
     python scripts/ui/snowleopard_reid_ui.py \
         --catalog-dir ./data/08_catalog/v1.0 \
-        --model-path ./data/04_models/yolo/segmentation/best/weights/best.pt \
+        --sam-checkpoint-path ./data/04_models/SAM_HQ/sam_hq_vit_l.pth \
         --port 7860 \
         --share
 
@@ -25,6 +25,7 @@ Example:
     make ui
 
 Notes:
+    - Uses Grounding DINO + SAM HQ for high-quality segmentation
     - Default port is 7860, accessible at http://localhost:7860
     - Use --share to create public URL (Gradio tunnel)
     - Requires catalog with extracted features (run extract_catalog_features.py first)
@@ -59,6 +60,10 @@ from snowleopard_reid.pipeline.stages import (
     run_segmentation_stage,
     select_best_mask,
 )
+from snowleopard_reid.pipeline.stages.segmentation import (
+    load_gdino_model,
+    load_sam_predictor,
+)
 from snowleopard_reid.visualization import (
     draw_keypoints_overlay,
     draw_matched_keypoints,
@@ -80,6 +85,11 @@ class AppConfig:
     top_k: int
     port: int
     share: bool
+    # GDINO+SAM parameters
+    sam_checkpoint_path: Path
+    sam_model_type: str
+    gdino_model_id: str
+    text_prompt: str
 
 
 def get_available_extractors(catalog_root: Path) -> list[str]:
@@ -154,6 +164,36 @@ def parse_args() -> AppConfig:
         help="Create a public Gradio tunnel URL",
     )
 
+    # GDINO+SAM segmentation arguments
+    parser.add_argument(
+        "--sam-checkpoint-path",
+        type=Path,
+        default=Path("data/04_models/SAM_HQ/sam_hq_vit_l.pth"),
+        help="Path to SAM HQ checkpoint (default: %(default)s)",
+    )
+
+    parser.add_argument(
+        "--sam-model-type",
+        type=str,
+        default="vit_l",
+        choices=["vit_b", "vit_l", "vit_h"],
+        help="SAM model type (default: %(default)s)",
+    )
+
+    parser.add_argument(
+        "--gdino-model-id",
+        type=str,
+        default="IDEA-Research/grounding-dino-base",
+        help="HuggingFace model ID for Grounding DINO (default: %(default)s)",
+    )
+
+    parser.add_argument(
+        "--text-prompt",
+        type=str,
+        default="a snow leopard.",
+        help="Text prompt for Grounding DINO (default: %(default)s)",
+    )
+
     args = parser.parse_args()
 
     return AppConfig(
@@ -163,6 +203,10 @@ def parse_args() -> AppConfig:
         top_k=args.top_k,
         port=args.port,
         share=args.share,
+        sam_checkpoint_path=args.sam_checkpoint_path,
+        sam_model_type=args.sam_model_type,
+        gdino_model_id=args.gdino_model_id,
+        text_prompt=args.text_prompt,
     )
 
 
@@ -200,7 +244,7 @@ def initialize_models(config: AppConfig):
     """Load models at startup for faster inference.
 
     Args:
-        config: Application configuration containing model_path
+        config: Application configuration containing model paths
     """
     logger.info("Initializing models...")
 
@@ -213,17 +257,32 @@ def initialize_models(config: AppConfig):
         gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
         logger.info(f"GPU: {gpu_name} ({gpu_memory:.1f} GB)")
 
-    # Load YOLO model once at startup
-    from ultralytics import YOLO
+    # Load Grounding DINO model
+    logger.info(f"Loading Grounding DINO model: {config.gdino_model_id}")
+    gdino_processor, gdino_model = load_gdino_model(
+        model_id=config.gdino_model_id,
+        device=device,
+    )
+    LOADED_MODELS["gdino_processor"] = gdino_processor
+    LOADED_MODELS["gdino_model"] = gdino_model
+    logger.info("Grounding DINO model loaded successfully")
 
-    logger.info(f"Loading YOLO model from {config.model_path}")
-    yolo_model = YOLO(str(config.model_path))
-    LOADED_MODELS["yolo"] = yolo_model
-    logger.info("YOLO model loaded successfully")
+    # Load SAM HQ model
+    logger.info(
+        f"Loading SAM HQ model from {config.sam_checkpoint_path} (type: {config.sam_model_type})"
+    )
+    sam_predictor = load_sam_predictor(
+        checkpoint_path=config.sam_checkpoint_path,
+        model_type=config.sam_model_type,
+        device=device,
+    )
+    LOADED_MODELS["sam_predictor"] = sam_predictor
+    logger.info("SAM HQ model loaded successfully")
 
     # Store device info and catalog root for callbacks
     LOADED_MODELS["device"] = device
     LOADED_MODELS["catalog_root"] = config.catalog_root
+    LOADED_MODELS["text_prompt"] = config.text_prompt
 
     logger.info("Models initialized successfully")
 
@@ -301,22 +360,31 @@ def run_identification(
 
         device = LOADED_MODELS.get("device", "cpu")
 
-        # Step 1: Run YOLO segmentation using pre-loaded model
-        logger.info("Running YOLO segmentation...")
-        yolo_model = LOADED_MODELS.get("yolo")
+        # Step 1: Run GDINO+SAM segmentation using pre-loaded models
+        logger.info("Running GDINO+SAM segmentation...")
+        gdino_processor = LOADED_MODELS.get("gdino_processor")
+        gdino_model = LOADED_MODELS.get("gdino_model")
+        sam_predictor = LOADED_MODELS.get("sam_predictor")
+        text_prompt = LOADED_MODELS.get("text_prompt", "a snow leopard.")
 
         seg_stage = run_segmentation_stage(
-            model=yolo_model,
             image_path=temp_image_path,
+            strategy="gdino_sam",
             confidence_threshold=0.2,
             device=device,
+            gdino_processor=gdino_processor,
+            gdino_model=gdino_model,
+            sam_predictor=sam_predictor,
+            text_prompt=text_prompt,
+            box_threshold=0.30,
+            text_threshold=0.20,
         )
 
         predictions = seg_stage["data"]["predictions"]
         logger.info(f"Number of predictions: {len(predictions)}")
 
         if not predictions:
-            logger.warning("No predictions found from YOLO")
+            logger.warning("No predictions found from segmentation")
             logger.warning(f"Full segmentation stage: {seg_stage}")
             return (
                 "❌ No snow leopards detected in image",
