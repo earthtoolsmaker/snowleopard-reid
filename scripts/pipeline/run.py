@@ -54,6 +54,10 @@ from snowleopard_reid.pipeline.stages import (
     run_preprocess_stage,
     run_segmentation_stage,
 )
+from snowleopard_reid.pipeline.stages.segmentation import (
+    load_gdino_model,
+    load_sam_predictor,
+)
 
 
 def setup_logging(log_level: str) -> None:
@@ -83,7 +87,7 @@ def save_stage_artifacts(output_dir: Path, stage: dict, stage_number: int) -> No
     stage_dir.mkdir(parents=True, exist_ok=True)
 
     if stage_id == "segmentation":
-        _save_yolo_artifacts(stage_dir=stage_dir, data=stage["data"])
+        _save_segmentation_artifacts(stage_dir=stage_dir, stage=stage)
     elif stage_id == "mask_selection":
         _save_selection_artifacts(stage_dir=stage_dir, data=stage["data"])
     elif stage_id == "preprocessing":
@@ -96,23 +100,34 @@ def save_stage_artifacts(output_dir: Path, stage: dict, stage_number: int) -> No
     logger.info(f"Saved artifacts to {stage_dir}")
 
 
-def _save_yolo_artifacts(stage_dir: Path, data: dict) -> None:
-    """Save YOLO stage artifacts."""
+def _save_segmentation_artifacts(stage_dir: Path, stage: dict) -> None:
+    """Save segmentation stage artifacts (YOLO or GDINO+SAM)."""
+    data = stage["data"]
+    config = stage["config"]
+    strategy = config.get("strategy", "yolo")
+
     # Save predictions JSON (without masks - too large)
     predictions_json = {
         "image_path": data["image_path"],
         "image_size": data["image_size"],
         "num_predictions": len(data["predictions"]),
-        "predictions_summary": [
-            {
-                "index": idx,
-                "confidence": pred["confidence"],
-                "bbox_xywhn": pred["bbox_xywhn"],
-                "class_name": pred["class_name"],
-            }
-            for idx, pred in enumerate(data["predictions"])
-        ],
+        "strategy": strategy,
+        "predictions_summary": [],
     }
+
+    # Build predictions summary based on strategy
+    for idx, pred in enumerate(data["predictions"]):
+        summary = {
+            "index": idx,
+            "confidence": pred["confidence"],
+            "bbox_xywhn": pred["bbox_xywhn"],
+            "class_name": pred["class_name"],
+        }
+        # Add GDINO+SAM-specific fields
+        if strategy == "gdino_sam":
+            summary["sam_score"] = pred.get("sam_score")
+            summary["gdino_score"] = pred.get("gdino_score")
+        predictions_json["predictions_summary"].append(summary)
 
     with open(stage_dir / "predictions.json", "w") as f:
         json.dump(predictions_json, f, indent=2)
@@ -127,7 +142,7 @@ def _save_yolo_artifacts(stage_dir: Path, data: dict) -> None:
 
         for idx, pred in enumerate(data["predictions"]):
             # Draw mask overlay (green with transparency)
-            # Resize mask to match image dimensions (YOLO masks are at inference resolution)
+            # Resize mask to match image dimensions (masks may be at inference resolution)
             mask = pred["mask"]
             mask_resized = cv2.resize(
                 mask, (image_width, image_height), interpolation=cv2.INTER_NEAREST
@@ -152,8 +167,12 @@ def _save_yolo_artifacts(stage_dir: Path, data: dict) -> None:
             # Draw bbox
             cv2.rectangle(overlay, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
 
-            # Draw label
-            label = f"{pred['class_name']} {pred['confidence']:.2f}"
+            # Draw label (include both scores for GDINO+SAM)
+            if strategy == "gdino_sam":
+                label = f"{pred['class_name']} GDINO={pred['confidence']:.2f} SAM={pred['sam_score']:.2f}"
+            else:
+                label = f"{pred['class_name']} {pred['confidence']:.2f}"
+
             cv2.putText(
                 overlay,
                 label,
@@ -305,22 +324,37 @@ def run(
     padding: int = 5,
     device: str | None = None,
     export_artifacts: bool = True,
+    # Segmentation strategy parameters
+    segmentation_strategy: str = "yolo",
+    gdino_model_id: str = "IDEA-Research/grounding-dino-base",
+    sam_checkpoint_path: Path | None = None,
+    sam_model_type: str = "vit_l",
+    text_prompt: str = "a snow leopard.",
+    box_threshold: float = 0.30,
+    text_threshold: float = 0.20,
 ) -> dict:
     """Run full matching pipeline.
 
     Args:
         image_path: Path to query image
         catalog_path: Path to catalog root directory
-        model_path: Path to YOLO model checkpoint
+        model_path: Path to YOLO model checkpoint (if strategy="yolo")
         output_dir: Directory to save results
         top_k: Number of top matches to return
         extractor: Feature extractor to use
         max_keypoints: Maximum keypoints to extract
-        confidence_threshold: YOLO confidence threshold
+        confidence_threshold: Minimum confidence threshold for detections
         mask_selection_strategy: Strategy for selecting best mask
         padding: Padding around mask bbox
         device: Device to use (None = auto-detect)
         export_artifacts: Whether to export intermediate artifacts
+        segmentation_strategy: Segmentation strategy ("yolo" or "gdino_sam")
+        gdino_model_id: HuggingFace model ID for Grounding DINO
+        sam_checkpoint_path: Path to SAM HQ checkpoint (required if strategy="gdino_sam")
+        sam_model_type: SAM model type (vit_b, vit_l, vit_h)
+        text_prompt: Text prompt for Grounding DINO
+        box_threshold: GDINO box confidence threshold
+        text_threshold: GDINO text matching threshold
 
     Returns:
         Dictionary with complete pipeline output
@@ -361,18 +395,56 @@ def run(
     output_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Output directory: {output_dir}")
 
-    # Stage 1: YOLO Segmentation
+    # Stage 1: Segmentation (YOLO or GDINO+SAM)
     logger.info("=" * 60)
-    logger.info("STAGE 1: YOLO Segmentation")
+    logger.info(f"STAGE 1: Segmentation (strategy={segmentation_strategy})")
     logger.info("=" * 60)
-    logger.info(f"Loading YOLO model from {model_path}")
-    model = YOLO(str(model_path))
-    stage1 = run_segmentation_stage(
-        model=model,
-        image_path=image_path,
-        confidence_threshold=confidence_threshold,
-        device=device,
-    )
+
+    # Load models based on strategy
+    if segmentation_strategy == "yolo":
+        logger.info(f"Loading YOLO model from {model_path}")
+        yolo_model = YOLO(str(model_path))
+        stage1 = run_segmentation_stage(
+            image_path=image_path,
+            strategy="yolo",
+            confidence_threshold=confidence_threshold,
+            device=device,
+            yolo_model=yolo_model,
+        )
+    elif segmentation_strategy == "gdino_sam":
+        if sam_checkpoint_path is None:
+            raise ValueError(
+                "sam_checkpoint_path is required when segmentation_strategy='gdino_sam'"
+            )
+
+        logger.info(f"Loading Grounding DINO model: {gdino_model_id}")
+        gdino_processor, gdino_model = load_gdino_model(
+            model_id=gdino_model_id,
+            device=device,
+        )
+
+        logger.info(f"Loading SAM HQ model from {sam_checkpoint_path}")
+        sam_predictor = load_sam_predictor(
+            checkpoint_path=sam_checkpoint_path,
+            model_type=sam_model_type,
+            device=device,
+        )
+
+        stage1 = run_segmentation_stage(
+            image_path=image_path,
+            strategy="gdino_sam",
+            confidence_threshold=confidence_threshold,
+            device=device,
+            gdino_processor=gdino_processor,
+            gdino_model=gdino_model,
+            sam_predictor=sam_predictor,
+            text_prompt=text_prompt,
+            box_threshold=box_threshold,
+            text_threshold=text_threshold,
+        )
+    else:
+        raise ValueError(f"Invalid segmentation strategy: {segmentation_strategy}")
+
     if export_artifacts:
         save_stage_artifacts(output_dir=output_dir, stage=stage1, stage_number=1)
 
@@ -450,23 +522,41 @@ def run(
         )
 
     # Build complete pipeline output
+    config = {
+        "catalog_path": str(catalog_path),
+        "model_path": str(model_path),
+        "top_k": top_k,
+        "extractor": extractor,
+        "max_keypoints": max_keypoints,
+        "confidence_threshold": confidence_threshold,
+        "mask_selection_strategy": mask_selection_strategy,
+        "padding": padding,
+        "device": device or "auto",
+        "segmentation_strategy": segmentation_strategy,
+    }
+
+    # Add strategy-specific config
+    if segmentation_strategy == "gdino_sam":
+        config.update(
+            {
+                "gdino_model_id": gdino_model_id,
+                "sam_checkpoint_path": str(sam_checkpoint_path)
+                if sam_checkpoint_path
+                else None,
+                "sam_model_type": sam_model_type,
+                "text_prompt": text_prompt,
+                "box_threshold": box_threshold,
+                "text_threshold": text_threshold,
+            }
+        )
+
     pipeline_output = {
         "format_version": "1.0",
         "query": {
             "image_path": str(image_path),
             "query_id": output_dir.name,
         },
-        "config": {
-            "catalog_path": str(catalog_path),
-            "model_path": str(model_path),
-            "top_k": top_k,
-            "extractor": extractor,
-            "max_keypoints": max_keypoints,
-            "confidence_threshold": confidence_threshold,
-            "mask_selection_strategy": mask_selection_strategy,
-            "padding": padding,
-            "device": device or "auto",
-        },
+        "config": config,
         "results": stage5["data"],
         "output_dir": str(output_dir),
     }
@@ -536,13 +626,59 @@ Examples:
         "--model-path",
         type=Path,
         default=Path("data/04_models/yolo/segmentation/best/weights/best.pt"),
-        help="Path to YOLO model (default: best model)",
+        help="Path to YOLO model (default: best model) - used when --segmentation-strategy=yolo",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
         required=True,
         help="Output directory for results",
+    )
+
+    # Segmentation strategy arguments
+    parser.add_argument(
+        "--segmentation-strategy",
+        type=str,
+        default="yolo",
+        choices=["yolo", "gdino_sam"],
+        help="Segmentation strategy (default: yolo)",
+    )
+    parser.add_argument(
+        "--gdino-model-id",
+        type=str,
+        default="IDEA-Research/grounding-dino-base",
+        help="HuggingFace model ID for Grounding DINO (default: IDEA-Research/grounding-dino-base)",
+    )
+    parser.add_argument(
+        "--sam-checkpoint-path",
+        type=Path,
+        default=None,
+        help="Path to SAM HQ checkpoint (required if --segmentation-strategy=gdino_sam)",
+    )
+    parser.add_argument(
+        "--sam-model-type",
+        type=str,
+        default="vit_l",
+        choices=["vit_b", "vit_l", "vit_h"],
+        help="SAM model type (default: vit_l)",
+    )
+    parser.add_argument(
+        "--text-prompt",
+        type=str,
+        default="a snow leopard.",
+        help="Text prompt for Grounding DINO (default: 'a snow leopard.')",
+    )
+    parser.add_argument(
+        "--box-threshold",
+        type=float,
+        default=0.30,
+        help="GDINO box confidence threshold (default: 0.30)",
+    )
+    parser.add_argument(
+        "--text-threshold",
+        type=float,
+        default=0.20,
+        help="GDINO text matching threshold (default: 0.20)",
     )
     parser.add_argument(
         "--top-k",
@@ -620,6 +756,14 @@ Examples:
             padding=args.padding,
             device=args.device,
             export_artifacts=not args.no_export_artifacts,
+            # Segmentation strategy parameters
+            segmentation_strategy=args.segmentation_strategy,
+            gdino_model_id=args.gdino_model_id,
+            sam_checkpoint_path=args.sam_checkpoint_path,
+            sam_model_type=args.sam_model_type,
+            text_prompt=args.text_prompt,
+            box_threshold=args.box_threshold,
+            text_threshold=args.text_threshold,
         )
     except Exception as e:
         logging.error(f"Pipeline failed: {e}")
